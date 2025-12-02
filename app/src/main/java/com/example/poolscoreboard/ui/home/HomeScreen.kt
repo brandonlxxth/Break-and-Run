@@ -1,4 +1,4 @@
-package com.example.poolscoreboard.ui.home
+package com.brandonlxxth.breakandrun.ui.home
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -8,7 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.poolscoreboard.data.ActiveGame
+import com.brandonlxxth.breakandrun.data.ActiveGame
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

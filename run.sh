@@ -41,7 +41,7 @@ echo -e "${GREEN}Building and installing app (debug mode)...${NC}"
 echo -e "${GREEN}Launching app...${NC}"
 
 # Launch the app
-adb shell am start -n com.example.poolscoreboard/.MainActivity
+adb shell am start -n com.brandonlxxth.breakandrun/.MainActivity
 
 echo -e "${GREEN}App launched! Starting continuous build mode...${NC}"
 echo -e "${YELLOW}Watching for file changes. Press Ctrl+C to stop.${NC}"

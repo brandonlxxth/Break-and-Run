@@ -1,4 +1,4 @@
-package com.example.poolscoreboard.util
+package com.brandonlxxth.breakandrun.util
 
 /**
  * Normalizes a name for storage and comparison:

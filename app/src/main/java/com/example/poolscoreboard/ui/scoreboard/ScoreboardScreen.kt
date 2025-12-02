@@ -1,4 +1,4 @@
-package com.example.poolscoreboard.ui.scoreboard
+package com.brandonlxxth.breakandrun.ui.scoreboard
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
@@ -17,14 +17,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
-import com.example.poolscoreboard.data.ActiveGame
-import com.example.poolscoreboard.data.DishType
-import com.example.poolscoreboard.data.Frame
-import com.example.poolscoreboard.data.Game
-import com.example.poolscoreboard.data.GameMode
-import com.example.poolscoreboard.data.Set
-import com.example.poolscoreboard.util.formatNameForDisplay
-import com.example.poolscoreboard.util.normalizeName
+import com.brandonlxxth.breakandrun.data.ActiveGame
+import com.brandonlxxth.breakandrun.data.DishType
+import com.brandonlxxth.breakandrun.data.Frame
+import com.brandonlxxth.breakandrun.data.Game
+import com.brandonlxxth.breakandrun.data.GameMode
+import com.brandonlxxth.breakandrun.data.Set
+import com.brandonlxxth.breakandrun.util.formatNameForDisplay
+import com.brandonlxxth.breakandrun.util.normalizeName
 import java.util.Date
 
 @OptIn(ExperimentalMaterial3Api::class)

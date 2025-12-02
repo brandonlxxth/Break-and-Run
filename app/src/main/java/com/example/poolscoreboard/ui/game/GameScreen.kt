@@ -1,4 +1,4 @@
-package com.example.poolscoreboard.ui.game
+package com.brandonlxxth.breakandrun.ui.game
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
@@ -20,9 +20,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.content.res.Configuration
 import kotlinx.coroutines.delay
-import com.example.poolscoreboard.data.GameMode
-import com.example.poolscoreboard.util.formatNameForDisplay
-import com.example.poolscoreboard.util.normalizeName
+import com.brandonlxxth.breakandrun.data.GameMode
+import com.brandonlxxth.breakandrun.util.formatNameForDisplay
+import com.brandonlxxth.breakandrun.util.normalizeName
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

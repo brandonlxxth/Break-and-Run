@@ -1,4 +1,4 @@
-package com.example.poolscoreboard
+package com.brandonlxxth.breakandrun
 
 import org.junit.Test
 

@@ -5,12 +5,22 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
+// Load keystore properties if the file exists
+import java.util.Properties
+import java.io.FileInputStream
+
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+
 android {
-    namespace = "com.example.poolscoreboard"
+    namespace = "com.brandonlxxth.breakandrun"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.poolscoreboard"
+        applicationId = "com.brandonlxxth.breakandrun"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
@@ -19,13 +29,33 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        if (keystorePropertiesFile.exists()) {
+            create("release") {
+                keyAlias = keystoreProperties["keyAlias"] as String? ?: ""
+                keyPassword = keystoreProperties["keyPassword"] as String? ?: ""
+                // Resolve keystore file path relative to project root
+                val keystoreFileName = keystoreProperties["storeFile"] as String? ?: ""
+                storeFile = if (keystoreFileName.isNotEmpty()) {
+                    rootProject.file(keystoreFileName)
+                } else {
+                    file("")
+                }
+                storePassword = keystoreProperties["storePassword"] as String? ?: ""
+            }
+        }
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            if (keystorePropertiesFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
     compileOptions {

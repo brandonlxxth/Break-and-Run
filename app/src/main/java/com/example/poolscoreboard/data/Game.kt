@@ -1,4 +1,4 @@
-package com.example.poolscoreboard.data
+package com.brandonlxxth.breakandrun.data
 
 import java.util.Date
 

@@ -1,4 +1,4 @@
-package com.example.poolscoreboard
+package com.brandonlxxth.breakandrun
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -17,16 +17,16 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.poolscoreboard.data.ActiveGame
-import com.example.poolscoreboard.data.Game
-import com.example.poolscoreboard.data.GameMode
-import com.example.poolscoreboard.data.GameRepository
-import com.example.poolscoreboard.ui.game.GameScreen
-import com.example.poolscoreboard.ui.home.HomeScreen
-import com.example.poolscoreboard.ui.pastgames.PastGamesScreen
-import com.example.poolscoreboard.ui.scoreboard.ScoreboardScreen
-import com.example.poolscoreboard.ui.theme.PoolScoreboardTheme
-import com.example.poolscoreboard.util.normalizeName
+import com.brandonlxxth.breakandrun.data.ActiveGame
+import com.brandonlxxth.breakandrun.data.Game
+import com.brandonlxxth.breakandrun.data.GameMode
+import com.brandonlxxth.breakandrun.data.GameRepository
+import com.brandonlxxth.breakandrun.ui.game.GameScreen
+import com.brandonlxxth.breakandrun.ui.home.HomeScreen
+import com.brandonlxxth.breakandrun.ui.pastgames.PastGamesScreen
+import com.brandonlxxth.breakandrun.ui.scoreboard.ScoreboardScreen
+import com.brandonlxxth.breakandrun.ui.theme.PoolScoreboardTheme
+import com.brandonlxxth.breakandrun.util.normalizeName
 import kotlinx.coroutines.launch
 
 sealed class Screen(val route: String) {

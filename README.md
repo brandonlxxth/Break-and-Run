@@ -96,7 +96,7 @@ This guide will help you install the app on your Android phone using ADB (Androi
 **"INSTALL_FAILED_UPDATE_INCOMPATIBLE"**
 - You may have an older version installed. Uninstall it first:
   ```
-  adb uninstall com.example.poolscoreboard
+  adb uninstall com.brandonlxxth.breakandrun
   ```
   Then try installing again
 

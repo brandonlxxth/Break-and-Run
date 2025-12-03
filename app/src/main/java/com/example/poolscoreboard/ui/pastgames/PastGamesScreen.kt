@@ -114,16 +114,23 @@ fun ExpandableGameCard(
     val durationSecs = durationSeconds % 60
     
     val avgTimeBetweenFrames = try {
-        if (game.frameHistory.isNotEmpty() && game.frameHistory.size > 1) {
-            val totalTime = game.frameHistory.last().timestamp.time - game.frameHistory.first().timestamp.time
-            totalTime / (game.frameHistory.size - 1)
-        } else {
-            0L
+        when {
+            game.frameHistory.isEmpty() -> 0.0
+            game.frameHistory.size == 1 -> {
+                // If only one frame, calculate time from start to that frame
+                val timeFromStart = game.frameHistory.first().timestamp.time - game.startTime.time
+                timeFromStart.toDouble()
+            }
+            else -> {
+                // Multiple frames: calculate average time between frames
+                val totalTime = game.frameHistory.last().timestamp.time - game.frameHistory.first().timestamp.time
+                totalTime.toDouble() / (game.frameHistory.size - 1)
+            }
         }
     } catch (e: Exception) {
-        0L
+        0.0
     }
-    val avgSeconds = avgTimeBetweenFrames / 1000
+    val avgSeconds = avgTimeBetweenFrames / 1000.0
     
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -238,7 +245,7 @@ fun ExpandableGameCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                         )
                         Text(
-                            text = "Avg: ${avgSeconds}s/frame",
+                            text = "Avg: ${String.format("%.1f", avgSeconds)}s/frame",
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                         )

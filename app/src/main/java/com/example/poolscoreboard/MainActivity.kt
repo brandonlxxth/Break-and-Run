@@ -18,6 +18,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.brandonlxxth.breakandrun.data.ActiveGame
+import com.brandonlxxth.breakandrun.data.BallColor
 import com.brandonlxxth.breakandrun.data.Game
 import com.brandonlxxth.breakandrun.data.GameMode
 import com.brandonlxxth.breakandrun.data.GameRepository
@@ -33,11 +34,13 @@ sealed class Screen(val route: String) {
     object Home : Screen("home")
     object NewGame : Screen("new_game")
     object Scoreboard : Screen("scoreboard") {
-        fun createRoute(playerOne: String, playerTwo: String, gameMode: String, targetScore: Int, breakPlayer: String): String {
+        fun createRoute(playerOne: String, playerTwo: String, gameMode: String, targetScore: Int, breakPlayer: String, p1Color: BallColor?, p2Color: BallColor?): String {
             val p1 = java.net.URLEncoder.encode(playerOne, "UTF-8")
             val p2 = java.net.URLEncoder.encode(playerTwo, "UTF-8")
             val breakP = java.net.URLEncoder.encode(breakPlayer, "UTF-8")
-            return "scoreboard/$p1/$p2/$gameMode/$targetScore/$breakP"
+            val color1 = p1Color?.name ?: "NONE"
+            val color2 = p2Color?.name ?: "NONE"
+            return "scoreboard/$p1/$p2/$gameMode/$targetScore/$breakP/$color1/$color2"
         }
     }
     object PastGames : Screen("past_games")
@@ -122,20 +125,22 @@ fun PoolScoreboardApp() {
                 onBackClick = {
                     navController.popBackStack()
                 },
-                onCreateGame = { playerOne, playerTwo, gameMode, targetScore, breakPlayer ->
-                    navController.navigate(Screen.Scoreboard.createRoute(playerOne, playerTwo, gameMode.name, targetScore, breakPlayer))
+                onCreateGame = { playerOne, playerTwo, gameMode, targetScore, breakPlayer, p1Color, p2Color ->
+                    navController.navigate(Screen.Scoreboard.createRoute(playerOne, playerTwo, gameMode.name, targetScore, breakPlayer, p1Color, p2Color))
                 }
             )
         }
 
         composable(
-            route = "scoreboard/{playerOne}/{playerTwo}/{gameMode}/{targetScore}/{breakPlayer}",
+            route = "scoreboard/{playerOne}/{playerTwo}/{gameMode}/{targetScore}/{breakPlayer}/{p1Color}/{p2Color}",
             arguments = listOf(
                 navArgument("playerOne") { type = NavType.StringType },
                 navArgument("playerTwo") { type = NavType.StringType },
                 navArgument("gameMode") { type = NavType.StringType },
                 navArgument("targetScore") { type = NavType.IntType },
-                navArgument("breakPlayer") { type = NavType.StringType }
+                navArgument("breakPlayer") { type = NavType.StringType },
+                navArgument("p1Color") { type = NavType.StringType },
+                navArgument("p2Color") { type = NavType.StringType }
             )
         ) { backStackEntry ->
             val playerOne = java.net.URLDecoder.decode(backStackEntry.arguments?.getString("playerOne") ?: "Player 1", "UTF-8")
@@ -143,11 +148,19 @@ fun PoolScoreboardApp() {
             val gameModeStr = backStackEntry.arguments?.getString("gameMode") ?: "RACE_TO"
             val targetScore = backStackEntry.arguments?.getInt("targetScore") ?: 7
             val breakPlayer = java.net.URLDecoder.decode(backStackEntry.arguments?.getString("breakPlayer") ?: "", "UTF-8")
+            val p1ColorStr = backStackEntry.arguments?.getString("p1Color") ?: "NONE"
+            val p2ColorStr = backStackEntry.arguments?.getString("p2Color") ?: "NONE"
             val gameMode = try {
                 GameMode.valueOf(gameModeStr)
             } catch (e: IllegalArgumentException) {
                 GameMode.RACE_TO
             }
+            val p1Color = if (p1ColorStr.isNotBlank() && p1ColorStr != "NONE") {
+                try { BallColor.valueOf(p1ColorStr) } catch (e: Exception) { null }
+            } else null
+            val p2Color = if (p2ColorStr.isNotBlank() && p2ColorStr != "NONE") {
+                try { BallColor.valueOf(p2ColorStr) } catch (e: Exception) { null }
+            } else null
             
             // Normalize names (lowercase, trimmed) for storage and comparison
             // Display will be handled in ScoreboardScreen with first letter capitalized
@@ -157,6 +170,8 @@ fun PoolScoreboardApp() {
                 gameMode = gameMode,
                 targetScore = targetScore,
                 breakPlayer = if (breakPlayer.isNotBlank()) normalizeName(breakPlayer) else null,
+                playerOneColor = p1Color,
+                playerTwoColor = p2Color,
                 activeGame = null,
                 pastGames = pastGames,
                 onBackClick = { savedActiveGame ->
@@ -200,6 +215,8 @@ fun PoolScoreboardApp() {
                     gameMode = gameToResume.gameMode,
                     targetScore = gameToResume.targetScore,
                     breakPlayer = gameToResume.breakPlayer,
+                    playerOneColor = gameToResume.playerOneColor,
+                    playerTwoColor = gameToResume.playerTwoColor,
                     activeGame = gameToResume,
                     pastGames = pastGames,
                     onBackClick = { savedActiveGame ->

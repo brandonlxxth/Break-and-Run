@@ -31,7 +31,7 @@ fun HomeScreen(
         ) {
             // App Title
             Text(
-                text = "Pool Scoreboard",
+                text = "Break & Run",
                 fontSize = 42.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,

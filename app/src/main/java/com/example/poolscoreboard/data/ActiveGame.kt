@@ -19,6 +19,9 @@ data class ActiveGame(
     val playerTwoSetsWon: Int = 0,
     val completedSets: List<Set> = emptyList(),
     // Track whose break it is (normalized name)
-    val breakPlayer: String? = null
+    val breakPlayer: String? = null,
+    // Ball colors assigned to players
+    val playerOneColor: BallColor? = null,
+    val playerTwoColor: BallColor? = null
 )
 

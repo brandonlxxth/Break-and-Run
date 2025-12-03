@@ -73,7 +73,9 @@ data class SerializableActiveGame(
     val playerOneSetsWon: Int = 0,
     val playerTwoSetsWon: Int = 0,
     val completedSets: List<SerializableSet> = emptyList(),
-    val breakPlayer: String? = null
+    val breakPlayer: String? = null,
+    val playerOneColor: String? = null,
+    val playerTwoColor: String? = null
 )
 
 class GameRepository(private val context: Context) {
@@ -336,7 +338,9 @@ class GameRepository(private val context: Context) {
             playerOneSetsWon = playerOneSetsWon,
             playerTwoSetsWon = playerTwoSetsWon,
             completedSets = completedSets.map { it.toSerializable() },
-            breakPlayer = breakPlayer
+            breakPlayer = breakPlayer,
+            playerOneColor = playerOneColor?.name,
+            playerTwoColor = playerTwoColor?.name
         )
     }
 
@@ -375,7 +379,21 @@ class GameRepository(private val context: Context) {
             playerOneSetsWon = playerOneSetsWon,
             playerTwoSetsWon = playerTwoSetsWon,
             completedSets = completedSets.map { it.toSet() },
-            breakPlayer = breakPlayer
+            breakPlayer = breakPlayer,
+            playerOneColor = playerOneColor?.let {
+                try {
+                    BallColor.valueOf(it)
+                } catch (e: Exception) {
+                    null
+                }
+            },
+            playerTwoColor = playerTwoColor?.let {
+                try {
+                    BallColor.valueOf(it)
+                } catch (e: Exception) {
+                    null
+                }
+            }
         )
     }
 }

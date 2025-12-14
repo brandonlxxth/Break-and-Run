@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useNavigate, useParams } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { theme } from './theme/theme';
@@ -10,6 +10,19 @@ import PastGamesScreen from './components/PastGamesScreen';
 import { gameRepository } from './services/GameRepository';
 import { ActiveGame, Game, GameMode, BallColor } from './data/types';
 import { normalizeName } from './utils/nameUtils';
+
+// Store game data in sessionStorage temporarily for navigation
+const SESSION_STORAGE_KEY = 'breakandrun_newgame';
+
+interface NewGameData {
+  playerOne: string;
+  playerTwo: string;
+  gameMode: GameMode;
+  targetScore: number;
+  breakPlayer: string;
+  p1Color: BallColor | null;
+  p2Color: BallColor | null;
+}
 
 function AppRoutes() {
   const navigate = useNavigate();
@@ -31,14 +44,18 @@ function AppRoutes() {
     p1Color: BallColor | null,
     p2Color: BallColor | null
   ) => {
-    const encodedP1 = encodeURIComponent(playerOne);
-    const encodedP2 = encodeURIComponent(playerTwo);
-    const encodedBreak = encodeURIComponent(breakPlayer);
-    const color1 = p1Color?.toString() || 'NONE';
-    const color2 = p2Color?.toString() || 'NONE';
-    navigate(
-      `/scoreboard/${encodedP1}/${encodedP2}/${gameMode}/${targetScore}/${encodedBreak}/${color1}/${color2}`
-    );
+    // Store game data in sessionStorage temporarily
+    const gameData: NewGameData = {
+      playerOne,
+      playerTwo,
+      gameMode,
+      targetScore,
+      breakPlayer,
+      p1Color,
+      p2Color,
+    };
+    sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(gameData));
+    navigate('/scoreboard');
   };
 
   const handleActiveGameUpdate = (updatedGame: ActiveGame) => {
@@ -79,7 +96,9 @@ function AppRoutes() {
             onNewGameClick={() => navigate('/new-game')}
             onResumeGameClick={() => {
               if (activeGame) {
-                navigate(`/resume/${activeGame.id}`);
+                // Store game ID in sessionStorage temporarily
+                sessionStorage.setItem('breakandrun_resume', activeGame.id);
+                navigate('/resume');
               }
             }}
             onPastGamesClick={() => navigate('/past-games')}
@@ -97,11 +116,11 @@ function AppRoutes() {
         }
       />
       <Route
-        path="/scoreboard/:playerOne/:playerTwo/:gameMode/:targetScore/:breakPlayer/:p1Color/:p2Color"
+        path="/scoreboard"
         element={<ScoreboardRoute pastGames={pastGames} onActiveGameUpdate={handleActiveGameUpdate} onGameEnd={handleGameEnd} onBackClick={handleBackFromScoreboard} />}
       />
       <Route
-        path="/resume/:gameId"
+        path="/resume"
         element={
           <ResumeGameRoute
             activeGame={activeGame}
@@ -140,26 +159,36 @@ function ScoreboardRoute({
   onGameEnd: (game: Game) => void;
   onBackClick: (game: ActiveGame | null) => void;
 }) {
-  const params = useParams();
-  const playerOne = decodeURIComponent(params.playerOne || 'Player 1');
-  const playerTwo = decodeURIComponent(params.playerTwo || 'Player 2');
-  const gameMode = (params.gameMode as GameMode) || GameMode.RACE_TO;
-  const targetScore = parseInt(params.targetScore || '7', 10);
-  const breakPlayer = decodeURIComponent(params.breakPlayer || '');
-  const p1ColorStr = params.p1Color || 'NONE';
-  const p2ColorStr = params.p2Color || 'NONE';
-  const p1Color = p1ColorStr !== 'NONE' ? (p1ColorStr as BallColor) : null;
-  const p2Color = p2ColorStr !== 'NONE' ? (p2ColorStr as BallColor) : null;
+  const navigate = useNavigate();
+  
+  // Get game data from sessionStorage
+  const gameDataStr = sessionStorage.getItem(SESSION_STORAGE_KEY);
+  
+  useEffect(() => {
+    // If no game data, redirect to home
+    if (!gameDataStr) {
+      navigate('/');
+    } else {
+      // Clear sessionStorage after reading (only once on mount)
+      sessionStorage.removeItem(SESSION_STORAGE_KEY);
+    }
+  }, [gameDataStr, navigate]);
+
+  if (!gameDataStr) {
+    return null; // Will redirect
+  }
+
+  const gameData: NewGameData = JSON.parse(gameDataStr);
 
   return (
     <ScoreboardScreen
-      playerOneName={normalizeName(playerOne)}
-      playerTwoName={normalizeName(playerTwo)}
-      gameMode={gameMode}
-      targetScore={targetScore}
-      breakPlayer={breakPlayer ? normalizeName(breakPlayer) : null}
-      playerOneColor={p1Color}
-      playerTwoColor={p2Color}
+      playerOneName={normalizeName(gameData.playerOne)}
+      playerTwoName={normalizeName(gameData.playerTwo)}
+      gameMode={gameData.gameMode}
+      targetScore={gameData.targetScore}
+      breakPlayer={gameData.breakPlayer ? normalizeName(gameData.breakPlayer) : null}
+      playerOneColor={gameData.p1Color}
+      playerTwoColor={gameData.p2Color}
       activeGame={null}
       pastGames={pastGames}
       onBackClick={onBackClick}
@@ -182,24 +211,40 @@ function ResumeGameRoute({
   onGameEnd: (game: Game) => void;
   onBackClick: (game: ActiveGame | null) => void;
 }) {
-  const params = useParams();
-  const gameId = params.gameId;
-  const gameToResume = activeGame?.id === gameId ? activeGame : null;
+  const navigate = useNavigate();
+  
+  // Get game ID from sessionStorage
+  const gameId = sessionStorage.getItem('breakandrun_resume');
+  
+  useEffect(() => {
+    // If no game ID or game not found, redirect to home
+    if (!gameId || !activeGame || activeGame.id !== gameId) {
+      sessionStorage.removeItem('breakandrun_resume');
+      navigate('/');
+    }
+  }, [gameId, activeGame, navigate]);
 
-  if (!gameToResume) {
-    return <div>Game not found</div>;
+  // Clear sessionStorage after reading
+  useEffect(() => {
+    if (gameId) {
+      sessionStorage.removeItem('breakandrun_resume');
+    }
+  }, [gameId]);
+
+  if (!gameId || !activeGame || activeGame.id !== gameId) {
+    return null; // Will redirect
   }
 
   return (
     <ScoreboardScreen
-      playerOneName={gameToResume.playerOneName}
-      playerTwoName={gameToResume.playerTwoName}
-      gameMode={gameToResume.gameMode}
-      targetScore={gameToResume.targetScore}
-      breakPlayer={gameToResume.breakPlayer}
-      playerOneColor={gameToResume.playerOneColor}
-      playerTwoColor={gameToResume.playerTwoColor}
-      activeGame={gameToResume}
+      playerOneName={activeGame.playerOneName}
+      playerTwoName={activeGame.playerTwoName}
+      gameMode={activeGame.gameMode}
+      targetScore={activeGame.targetScore}
+      breakPlayer={activeGame.breakPlayer}
+      playerOneColor={activeGame.playerOneColor}
+      playerTwoColor={activeGame.playerTwoColor}
+      activeGame={activeGame}
       pastGames={pastGames}
       onBackClick={onBackClick}
       onGameEnd={onGameEnd}

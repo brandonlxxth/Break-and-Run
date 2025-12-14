@@ -1,5 +1,4 @@
 import { supabase } from './supabase';
-import type { User } from '@supabase/supabase-js';
 
 export interface AuthUser {
   id: string;

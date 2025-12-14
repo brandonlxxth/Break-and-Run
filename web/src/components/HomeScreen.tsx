@@ -19,7 +19,6 @@ import CloseIcon from '@mui/icons-material/Close';
 import LoginIcon from '@mui/icons-material/Login';
 import LogoutIcon from '@mui/icons-material/Logout';
 import CloudSyncIcon from '@mui/icons-material/CloudSync';
-import SecurityIcon from '@mui/icons-material/Security';
 import DevicesIcon from '@mui/icons-material/Devices';
 import { ActiveGame } from '../data/types';
 import { formatNameForDisplay } from '../utils/nameUtils';

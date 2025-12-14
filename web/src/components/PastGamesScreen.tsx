@@ -17,7 +17,7 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import { Game, GameMode, GameModeDisplayNames, DishType, DishTypeDisplayNames } from '../data/types';
+import { Game, GameMode, GameModeDisplayNames, DishTypeDisplayNames } from '../data/types';
 import { formatNameForDisplay } from '../utils/nameUtils';
 
 interface PastGamesScreenProps {
@@ -298,7 +298,7 @@ export default function PastGamesScreen({
                         const secondsSincePrevious = timeSincePrevious / 1000.0;
 
                         // Debug: Log frame data to help identify issues
-                        if (process.env.NODE_ENV === 'development' && frame.dishType) {
+                        if (import.meta.env.DEV && frame.dishType) {
                           console.log('Frame with dish:', { index, frame, dishType: frame.dishType });
                         }
                         return (

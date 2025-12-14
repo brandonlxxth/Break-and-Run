@@ -7,7 +7,6 @@ import {
   Button,
   Container,
   Grid,
-  Chip,
   Fade,
   useTheme,
   IconButton,

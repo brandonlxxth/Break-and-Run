@@ -37,19 +37,32 @@ function AppRoutes() {
   // Configure repository based on auth state
   useEffect(() => {
     unifiedGameRepository.setUseApi(!!user);
+    
+    // Clear games when user signs out
+    if (!user) {
+      setActiveGame(null);
+      setPastGames([]);
+    }
   }, [user]);
 
-  // Load games when auth state changes
+  // Load games when auth state changes (only if user is signed in)
   useEffect(() => {
     const loadGames = async () => {
       setGamesLoading(true);
       try {
-        const [active, past] = await Promise.all([
-          unifiedGameRepository.getActiveGame(),
-          unifiedGameRepository.getPastGames(),
-        ]);
-        setActiveGame(active);
-        setPastGames(past);
+        if (user) {
+          // Only load games if user is signed in
+          const [active, past] = await Promise.all([
+            unifiedGameRepository.getActiveGame(),
+            unifiedGameRepository.getPastGames(),
+          ]);
+          setActiveGame(active);
+          setPastGames(past);
+        } else {
+          // Clear games when not signed in
+          setActiveGame(null);
+          setPastGames([]);
+        }
       } catch (error) {
         console.error('Error loading games:', error);
       } finally {

@@ -18,6 +18,9 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import CloseIcon from '@mui/icons-material/Close';
 import LoginIcon from '@mui/icons-material/Login';
 import LogoutIcon from '@mui/icons-material/Logout';
+import CloudSyncIcon from '@mui/icons-material/CloudSync';
+import SecurityIcon from '@mui/icons-material/Security';
+import DevicesIcon from '@mui/icons-material/Devices';
 import { ActiveGame } from '../data/types';
 import { formatNameForDisplay } from '../utils/nameUtils';
 import { useAuth } from '../contexts/AuthContext';
@@ -193,21 +196,58 @@ export default function HomeScreen({
               </Box>
               <Box sx={{ textAlign: 'center' }}>
                 <Typography variant="h4" fontWeight="bold" sx={{ color: 'secondary.main', fontSize: { xs: '1.5rem', sm: '2rem', md: '2.125rem' } }}>
-                  Instant
+                  Cloud Sync
                 </Typography>
                 <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
-                  Score Tracking
+                  {user ? 'Active' : 'Available'}
                 </Typography>
               </Box>
               <Box sx={{ textAlign: 'center' }}>
                 <Typography variant="h4" fontWeight="bold" sx={{ color: 'primary.main', fontSize: { xs: '1.5rem', sm: '2rem', md: '2.125rem' } }}>
-                  Always
+                  Cross-Device
                 </Typography>
                 <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
-                  Accessible
+                  Access
                 </Typography>
               </Box>
             </Box>
+            
+            {/* Login Prompt for Non-Authenticated Users */}
+            {!user && (
+              <Fade in timeout={1000}>
+                <Box
+                  sx={{
+                    maxWidth: 600,
+                    mx: 'auto',
+                    mb: { xs: 4, sm: 5, md: 6 },
+                    p: { xs: 2, sm: 3 },
+                    borderRadius: 3,
+                    background: `linear-gradient(135deg, ${theme.palette.info.main}15, ${theme.palette.info.dark}15)`,
+                    border: `1px solid ${theme.palette.info.main}30`,
+                    textAlign: 'center',
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mb: 1 }}>
+                    <CloudSyncIcon sx={{ color: 'info.main', fontSize: { xs: 20, sm: 24 } }} />
+                    <Typography variant="h6" fontWeight="bold" sx={{ color: 'info.main', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+                      Sign In to Sync Your Games
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2, fontSize: { xs: '0.875rem', sm: '1rem' } }}>
+                    Create an account to save your games in the cloud and access them from any device. Never lose your game history again!
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    color="info"
+                    onClick={onLoginClick}
+                    startIcon={<LoginIcon />}
+                    sx={{ fontWeight: 'bold' }}
+                  >
+                    Sign In / Sign Up
+                  </Button>
+                </Box>
+              </Fade>
+            )}
           </Box>
         </Fade>
 
@@ -438,7 +478,8 @@ export default function HomeScreen({
             >
               Everything You Need
             </Typography>
-            <Grid container spacing={3}>
+            <Grid container spacing={3} justifyContent="center">
+              {/* First Row - 4 Cards */}
               <Grid item xs={12} sm={6} md={3}>
                   <Box
                     sx={{
@@ -580,6 +621,48 @@ export default function HomeScreen({
                       width: { xs: 50, sm: 60 },
                       height: { xs: 50, sm: 60 },
                       borderRadius: '50%',
+                      bgcolor: 'info.light',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      mx: 'auto',
+                      mb: { xs: 1.5, sm: 2 },
+                    }}
+                  >
+                    <CloudSyncIcon sx={{ fontSize: { xs: 24, sm: 30 }, color: 'info.main' }} />
+                  </Box>
+                  <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ color: 'text.primary', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+                    Cloud Backup
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+                    {user ? 'Your games are safely synced' : 'Sign in to enable cloud sync'}
+                  </Typography>
+                </Box>
+              </Grid>
+
+              {/* Second Row - 2 Cards Centered */}
+              <Grid item xs={0} md={3} sx={{ display: { xs: 'none', md: 'block' } }} />
+              <Grid item xs={12} sm={6} md={3}>
+                <Box
+                  sx={{
+                    textAlign: 'center',
+                    p: { xs: 2, sm: 3 },
+                    borderRadius: 3,
+                    bgcolor: 'background.paper',
+                    height: '100%',
+                    boxShadow: 2,
+                    transition: 'transform 0.2s ease',
+                    '&:hover': {
+                      transform: 'translateY(-4px)',
+                      boxShadow: 4,
+                    },
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: { xs: 50, sm: 60 },
+                      height: { xs: 50, sm: 60 },
+                      borderRadius: '50%',
                       bgcolor: 'warning.light',
                       display: 'flex',
                       alignItems: 'center',
@@ -598,6 +681,47 @@ export default function HomeScreen({
                   </Typography>
                 </Box>
               </Grid>
+
+              <Grid item xs={12} sm={6} md={3}>
+                <Box
+                  sx={{
+                    textAlign: 'center',
+                    p: { xs: 2, sm: 3 },
+                    borderRadius: 3,
+                    bgcolor: 'background.paper',
+                    height: '100%',
+                    boxShadow: 2,
+                    transition: 'transform 0.2s ease',
+                    '&:hover': {
+                      transform: 'translateY(-4px)',
+                      boxShadow: 4,
+                    },
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: { xs: 50, sm: 60 },
+                      height: { xs: 50, sm: 60 },
+                      borderRadius: '50%',
+                      bgcolor: 'primary.light',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      mx: 'auto',
+                      mb: { xs: 1.5, sm: 2 },
+                    }}
+                  >
+                    <DevicesIcon sx={{ fontSize: { xs: 24, sm: 30 }, color: 'primary.main' }} />
+                  </Box>
+                  <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ color: 'text.primary', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+                    Cross-Device
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+                    {user ? 'Access your games anywhere' : 'Sign in to sync across devices'}
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={0} md={3} sx={{ display: { xs: 'none', md: 'block' } }} />
             </Grid>
           </Box>
         </Fade>

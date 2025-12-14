@@ -9,6 +9,7 @@ import GameScreen from './components/GameScreen';
 import ScoreboardScreen from './components/ScoreboardScreen';
 import PastGamesScreen from './components/PastGamesScreen';
 import LoginScreen from './components/LoginScreen';
+import Footer from './components/Footer';
 import { unifiedGameRepository } from './services/UnifiedGameRepository';
 import { ActiveGame, Game, GameMode, BallColor } from './data/types';
 import { normalizeName } from './utils/nameUtils';
@@ -313,7 +314,12 @@ function App() {
       <CssBaseline />
       <BrowserRouter>
         <AuthProvider>
-          <AppRoutes />
+          <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+            <Box sx={{ flex: 1 }}>
+              <AppRoutes />
+            </Box>
+            <Footer />
+          </Box>
         </AuthProvider>
       </BrowserRouter>
     </ThemeProvider>

@@ -5,19 +5,15 @@ import { gameRepository } from './GameRepository';
 // This service handles API calls to Supabase
 // Uses GameRepository for serialization via composition
 export class ApiService {
-  private userId: string | null = null;
   private repository = gameRepository;
 
-  // Set user ID for API calls (called from auth context)
-  setUserId(userId: string | null) {
-    this.userId = userId;
-  }
-
-  private getUserIdInternal(): string {
-    if (!this.userId) {
+  // Get current user ID from Supabase session
+  private async getUserIdInternal(): Promise<string> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
       throw new Error('User not authenticated');
     }
-    return this.userId;
+    return user.id;
   }
 
   // Helper to access serialization methods
@@ -72,7 +68,7 @@ export class ApiService {
   // Add a completed game
   async addGame(game: Game): Promise<void> {
     try {
-      const userId = this.getUserIdInternal();
+      const userId = await this.getUserIdInternal();
       const serializableGame = this.serializeGame(game);
       
       // Map to database column names (snake_case)
@@ -176,14 +172,11 @@ export class ApiService {
   // Save active game
   async saveActiveGame(activeGame: ActiveGame | null): Promise<void> {
     try {
-      const userId = this.getUserIdInternal();
-      
       if (activeGame === null) {
-        // Delete active game
+        // Delete active game - RLS will automatically filter by auth.uid()
         const { error } = await supabase
           .from('active_games')
-          .delete()
-          .eq('user_id', userId);
+          .delete();
 
         if (error) {
           console.error('Error deleting active game:', error);
@@ -191,6 +184,7 @@ export class ApiService {
         }
       } else {
         // Upsert active game
+        const userId = await this.getUserIdInternal();
         const serializableActiveGame = this.serializeActiveGame(activeGame);
         
         // Map to database column names (snake_case)

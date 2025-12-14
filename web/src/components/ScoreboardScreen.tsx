@@ -649,13 +649,16 @@ export default function ScoreboardScreen({
             display: 'flex', 
             gap: '1vw', 
             justifyContent: 'center', 
-            flexWrap: 'wrap',
+            flexWrap: 'nowrap',
             flexShrink: 0,
             mt: { xs: 'auto', sm: 'auto' },
             pb: { xs: '0.25vh', sm: '0.5vh' },
             '@media (orientation: portrait)': {
               mt: '0.5vh',
               pb: '0.15vh',
+            },
+            '@media (orientation: landscape) and (max-width: 900px)': {
+              gap: '0.5vw',
             }
           }}>
             <Button
@@ -670,6 +673,13 @@ export default function ScoreboardScreen({
                 px: 'clamp(1.5rem, 4vw, 2.5rem)',
                 py: 'clamp(0.75rem, 2vh, 1rem)',
                 fontWeight: 'bold',
+                '@media (orientation: landscape) and (max-width: 900px)': {
+                  minWidth: 'clamp(50px, 12vw, 80px)',
+                  minHeight: 'clamp(36px, 5vh, 40px)',
+                  fontSize: 'clamp(0.75rem, 2vw, 0.9rem)',
+                  px: 'clamp(0.75rem, 2vw, 1rem)',
+                  py: 'clamp(0.5rem, 1.5vh, 0.75rem)',
+                }
               }}
             >
               -1
@@ -685,6 +695,13 @@ export default function ScoreboardScreen({
                 px: 'clamp(1.5rem, 4vw, 2.5rem)',
                 py: 'clamp(0.75rem, 2vh, 1rem)',
                 fontWeight: 'bold',
+                '@media (orientation: landscape) and (max-width: 900px)': {
+                  minWidth: 'clamp(50px, 12vw, 80px)',
+                  minHeight: 'clamp(36px, 5vh, 40px)',
+                  fontSize: 'clamp(0.75rem, 2vw, 0.9rem)',
+                  px: 'clamp(0.75rem, 2vw, 1rem)',
+                  py: 'clamp(0.5rem, 1.5vh, 0.75rem)',
+                }
               }}
             >
               +1
@@ -706,6 +723,13 @@ export default function ScoreboardScreen({
                 overflow: 'hidden',
                 px: 'clamp(1.5rem, 4vw, 2.5rem)',
                 py: 'clamp(0.75rem, 2vh, 1rem)',
+                '@media (orientation: landscape) and (max-width: 900px)': {
+                  minWidth: 'clamp(50px, 12vw, 80px)',
+                  minHeight: 'clamp(36px, 5vh, 40px)',
+                  fontSize: 'clamp(0.75rem, 2vw, 0.9rem)',
+                  px: 'clamp(0.75rem, 2vw, 1rem)',
+                  py: 'clamp(0.5rem, 1.5vh, 0.75rem)',
+                },
                 '&:hover': {
                   background: 'linear-gradient(135deg, #8e24aa 0%, #ab47bc 50%, #ba68c8 100%)',
                   boxShadow: '0 6px 20px rgba(156, 39, 176, 0.6)',
@@ -734,6 +758,9 @@ export default function ScoreboardScreen({
               }}
               startIcon={<StarIcon sx={{ 
                 fontSize: 'clamp(1rem, 3vw, 1.3rem)',
+                '@media (orientation: landscape) and (max-width: 900px)': {
+                  fontSize: 'clamp(0.75rem, 2vw, 0.9rem)',
+                }
               }} />}
             >
               Dish

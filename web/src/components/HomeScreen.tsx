@@ -213,8 +213,8 @@ export default function HomeScreen({
 
         {/* Main Action Cards */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
-          {/* Resume Game Card - Only show if active game exists */}
-          {activeGame && (
+          {/* Resume Game Card - Only show if active game exists AND user is signed in */}
+          {activeGame && user && (
             <Grid item xs={12} md={activeGame ? 4 : 6}>
               <Fade in timeout={1000}>
                 <Card

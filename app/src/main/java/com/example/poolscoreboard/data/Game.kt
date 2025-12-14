@@ -5,7 +5,8 @@ import java.util.Date
 enum class GameMode(val displayName: String) {
     RACE_TO("Race to"),
     FIRST_TO("Sets of"),
-    BEST_OF("Best of")
+    BEST_OF("Best of"),
+    FREE_PLAY("Free Play")
 }
 
 enum class DishType(val displayName: String) {

@@ -131,6 +131,8 @@ fun ExpandableGameCard(
         0.0
     }
     val avgSeconds = avgTimeBetweenFrames / 1000.0
+    val avgMinutes = (avgSeconds / 60).toInt()
+    val avgSecs = avgSeconds % 60
     
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -214,7 +216,11 @@ fun ExpandableGameCard(
             Spacer(modifier = Modifier.height(8.dp))
             
             Text(
-                text = "${game.gameMode.displayName}: ${game.targetScore}",
+                text = if (game.gameMode == GameMode.FREE_PLAY) {
+                    game.gameMode.displayName
+                } else {
+                    "${game.gameMode.displayName}: ${game.targetScore}"
+                },
                 fontSize = 14.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
             )
@@ -245,7 +251,11 @@ fun ExpandableGameCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                         )
                         Text(
-                            text = "Avg: ${String.format("%.1f", avgSeconds)}s/frame",
+                            text = if (avgMinutes > 0) {
+                                "Avg: ${avgMinutes}m ${String.format("%.1f", avgSecs)}s/frame"
+                            } else {
+                                "Avg: ${String.format("%.1f", avgSeconds)}s/frame"
+                            },
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                         )

@@ -11,9 +11,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.platform.LocalConfiguration
 import android.content.res.Configuration
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
@@ -55,6 +57,13 @@ fun ScoreboardScreen(
     var playerOneColorState by remember { mutableStateOf(activeGame?.playerOneColor ?: playerOneColor) }
     var playerTwoColorState by remember { mutableStateOf(activeGame?.playerTwoColor ?: playerTwoColor) }
     
+    // Track previous colors to restore on decrement
+    var previousPlayerOneColor by remember { mutableStateOf<BallColor?>(null) }
+    var previousPlayerTwoColor by remember { mutableStateOf<BallColor?>(null) }
+    
+    // Track if colors were restored (so second -1 clears them)
+    var colorsRestored by remember { mutableStateOf(false) }
+    
     // State for player scores (restore from active game if resuming)
     var playerOneScore by remember { mutableStateOf(activeGame?.playerOneScore ?: 0) }
     var playerTwoScore by remember { mutableStateOf(activeGame?.playerTwoScore ?: 0) }
@@ -77,20 +86,10 @@ fun ScoreboardScreen(
     // Track if current game ended (for Best of mode)
     var currentGameEnded by remember { mutableStateOf(false) }
     
-    // Dish dialog state
-    var showDishDialog by remember { mutableStateOf(false) }
-    var dishPlayer by remember { mutableStateOf<String?>(null) } // Track which player clicked dish
-    
-    // Break and color selection for new sets and new frames
-    var showBreakSelection by remember { mutableStateOf(false) }
+    // Color selection
     var showColorSelection by remember { mutableStateOf(false) }
-    var pendingBreakPlayer by remember { mutableStateOf<String?>(null) }
+    var colorSelectionPlayer by remember { mutableStateOf<String?>(null) } // Which player's color is being selected
     var selectedColor by remember { mutableStateOf<BallColor?>(null) }
-    var isForNewFrame by remember { mutableStateOf(false) } // Track if selection is for a new frame vs new set
-    var pendingFrameAction by remember { mutableStateOf<Pair<String, Int>?>(null) } // Track pending action: (playerName, scoreChange) where 1=increment, -1=decrement, 0=dish
-    var lastScoreState by remember { mutableStateOf(Pair(0, 0)) } // Track last score to detect new frames
-    var breakPlayerBeforeDialog by remember { mutableStateOf<String?>(null) } // Track who had "to break" before dialog opened
-    var isBreakSituation by remember { mutableStateOf(false) } // Track if this is a break situation (for showing Foul Break option)
     
     
     // Normalize names for comparison (lowercase, trimmed)
@@ -98,13 +97,6 @@ fun ScoreboardScreen(
     val normalizedP2Name = remember(playerTwoName) { normalizeName(playerTwoName) }
     
     // Handle foul break: if colors are null and this is a new game (not resuming), switch break player
-    LaunchedEffect(breakPlayer, playerOneColorState, playerTwoColorState, activeGame, normalizedP1Name, normalizedP2Name) {
-        if (activeGame == null && breakPlayer != null && playerOneColorState == null && playerTwoColorState == null) {
-            // Foul break detected on new game - switch to opponent
-            currentBreakPlayer = if (breakPlayer == normalizedP1Name) normalizedP2Name else normalizedP1Name
-        }
-    }
-    
     // Format names for display (capitalize first letter)
     val displayP1Name = remember(playerOneName) { formatNameForDisplay(playerOneName) }
     val displayP2Name = remember(playerTwoName) { formatNameForDisplay(playerTwoName) }
@@ -192,14 +184,23 @@ fun ScoreboardScreen(
                     matchingGames.forEach { game ->
                         try {
                             val gameP1Normalized = normalizeName(game.playerOneName)
+                            val gameP2Normalized = normalizeName(game.playerTwoName)
                             val isP1First = gameP1Normalized == normalizedP1Name
                             val winnerNormalized = game.winner?.let { normalizeName(it) }
                             when {
                                 winnerNormalized == null -> draws++
                                 isP1First && winnerNormalized == normalizedP1Name -> p1Wins++
                                 isP1First && winnerNormalized == normalizedP2Name -> p2Wins++
-                                !isP1First && winnerNormalized == normalizedP2Name -> p1Wins++
-                                !isP1First && winnerNormalized == normalizedP1Name -> p2Wins++
+                                !isP1First && winnerNormalized == gameP1Normalized -> {
+                                    // Past game has players swapped: gameP1Normalized == normalizedP2Name
+                                    // Winner is past game's player 1, which is current game's player 2
+                                    p2Wins++
+                                }
+                                !isP1First && winnerNormalized == gameP2Normalized -> {
+                                    // Past game has players swapped: gameP2Normalized == normalizedP1Name
+                                    // Winner is past game's player 2, which is current game's player 1
+                                    p1Wins++
+                                }
                             }
                         } catch (e: Exception) {
                             // Skip games with errors
@@ -213,6 +214,33 @@ fun ScoreboardScreen(
         } catch (e: Exception) {
             android.util.Log.e("ScoreboardScreen", "Error calculating aggregate stats: ${e.message}", e)
             null
+        }
+    }
+    
+    // Reset colors when a new frame starts (scores go to 0-0)
+    LaunchedEffect(playerOneScore, playerTwoScore) {
+        if (playerOneScore == 0 && playerTwoScore == 0) {
+            // New frame - reset colors and clear previous colors
+            playerOneColorState = null
+            playerTwoColorState = null
+            previousPlayerOneColor = null
+            previousPlayerTwoColor = null
+            colorsRestored = false
+        }
+    }
+    
+    // Update break player after each frame (switch to the other player)
+    var lastFrameCount by remember { mutableStateOf(0) }
+    LaunchedEffect(frameHistory.size) {
+        if (currentBreakPlayer != null) {
+            if (frameHistory.size > lastFrameCount) {
+                // Frame added: switch break player to the other player
+                currentBreakPlayer = if (currentBreakPlayer == normalizedP1Name) normalizedP2Name else normalizedP1Name
+            } else if (frameHistory.size < lastFrameCount) {
+                // Frame removed: switch break player back to the previous player
+                currentBreakPlayer = if (currentBreakPlayer == normalizedP1Name) normalizedP2Name else normalizedP1Name
+            }
+            lastFrameCount = frameHistory.size
         }
     }
     
@@ -249,6 +277,10 @@ fun ScoreboardScreen(
             
             Pair(Triple(p1WonMatch, p2WonMatch, matchComplete), gameEndedNow)
         }
+        GameMode.FREE_PLAY -> {
+            // Free play mode never auto-ends - only ends when user clicks "End Match"
+            Pair(Triple(false, false, false), false)
+        }
     }
     val (playerOneWon, playerTwoWon, gameEnded) = winConditions.first
     val setEnded = winConditions.second
@@ -276,7 +308,14 @@ fun ScoreboardScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(horizontalAlignment = Alignment.Start) {
-                                Text("${gameMode.displayName} $targetScore", fontSize = 14.sp)
+                                Text(
+                                    if (gameMode == GameMode.FREE_PLAY) {
+                                        gameMode.displayName
+                                    } else {
+                                        "${gameMode.displayName} $targetScore"
+                                    },
+                                    fontSize = 14.sp
+                                )
                                 if (gameMode == GameMode.FIRST_TO) {
                                     Text(
                                         text = "Sets: $playerOneSetsWon - $playerTwoSetsWon",
@@ -336,7 +375,14 @@ fun ScoreboardScreen(
                         } ?: run {
                             // Fallback if aggregateStats is null
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("${gameMode.displayName} $targetScore", fontSize = 14.sp)
+                                Text(
+                                    if (gameMode == GameMode.FREE_PLAY) {
+                                        gameMode.displayName
+                                    } else {
+                                        "${gameMode.displayName} $targetScore"
+                                    },
+                                    fontSize = 14.sp
+                                )
                                 if (gameMode == GameMode.FIRST_TO) {
                                     Text(
                                         text = "Sets: $playerOneSetsWon - $playerTwoSetsWon",
@@ -349,7 +395,13 @@ fun ScoreboardScreen(
                     } else {
                         // Portrait mode - original layout
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("${gameMode.displayName} $targetScore")
+                            Text(
+                                if (gameMode == GameMode.FREE_PLAY) {
+                                    gameMode.displayName
+                                } else {
+                                    "${gameMode.displayName} $targetScore"
+                                }
+                            )
                             if (gameMode == GameMode.FIRST_TO) {
                                 Text(
                                     text = "Sets: $playerOneSetsWon - $playerTwoSetsWon",
@@ -532,7 +584,7 @@ fun ScoreboardScreen(
                 PlayerHalf(
                     playerName = displayP1Name,
                     score = playerOneScore,
-                    gamesWon = if (gameMode == GameMode.BEST_OF) playerOneGamesWon else null,
+                    gamesWon = null,
                     isWinner = playerOneWon,
                     isEnabled = !gameEnded && !setEnded && !currentGameEnded,
                     backgroundColor = MaterialTheme.colorScheme.primaryContainer,
@@ -540,80 +592,122 @@ fun ScoreboardScreen(
                     isToBreak = p1ToBreak,
                     ballColor = playerOneColorState,
                     isLandscape = isLandscape,
+                    onSelectColor = {
+                        colorSelectionPlayer = normalizedP1Name
+                        showColorSelection = true
+                    },
                     onIncrement = {
                         if (!gameEnded && !setEnded && !currentGameEnded) {
-                            // Show color selection dialog at the start of every frame (when clicking +1)
-                            // Reset any previous state to ensure clean start
-                            selectedColor = null
-                            pendingBreakPlayer = null
-                            pendingFrameAction = null
-                            isForNewFrame = false
+                            // Store previous colors before resetting
+                            previousPlayerOneColor = playerOneColorState
+                            previousPlayerTwoColor = playerTwoColorState
                             
-                            // Always show color selection for the non-breaker (the opposite of who has "to break")
-                            val currentBreak = playerToBreak ?: normalizedP1Name
-                            val nonBreakPlayer = if (currentBreak == normalizedP1Name) normalizedP2Name else normalizedP1Name
+                            // Reset colors (show "Set Color" again)
+                            playerOneColorState = null
+                            playerTwoColorState = null
+                            colorsRestored = false
                             
-                            // Store who had "to break" BEFORE the dialog opens
-                            breakPlayerBeforeDialog = currentBreak
-                            // It's a break situation if someone is to break (regardless of who clicks)
-                            isBreakSituation = true // Always a break situation when someone is to break
-                            pendingBreakPlayer = nonBreakPlayer
-                            
-                            // The action player is who clicked +1, not who the dialog is for
-                            pendingFrameAction = Pair(normalizedP1Name, 1) // 1 = increment
-                            isForNewFrame = true
-                            showColorSelection = true
-                            return@PlayerHalf
+                            // Increment the score
+                            playerOneScore++
+                            // Record frame
+                            val frame = Frame(
+                                player = normalizedP1Name,
+                                scoreChange = 1,
+                                timestamp = Date(),
+                                playerOneScore = playerOneScore,
+                                playerTwoScore = playerTwoScore,
+                                dishType = null
+                            )
+                            frameHistory = frameHistory + frame
+                            if (gameMode == GameMode.FIRST_TO) {
+                                currentSetFrames = currentSetFrames + frame
+                            }
+                            // Check win conditions
+                            val newFrameCount = playerOneScore + playerTwoScore
+                            if (gameMode == GameMode.BEST_OF && newFrameCount >= targetScore) {
+                                currentGameEnded = true
+                            }
                         }
                     },
                     onDecrement = {
-                        if (playerOneScore > 0 && !gameEnded && !setEnded && !currentGameEnded) {
-                            // Show color selection dialog when clicking -1 (same as +1)
-                            // Reset any previous state to ensure clean start
-                            selectedColor = null
-                            pendingBreakPlayer = null
-                            pendingFrameAction = null
-                            isForNewFrame = false
+                        // Allow decrement if score > 0 (can always undo to recover from accidental presses)
+                        if (playerOneScore > 0) {
+                            // Color restoration logic: first -1 restores, second -1 clears
+                            if (colorsRestored) {
+                                // Second -1: clear colors
+                                playerOneColorState = null
+                                playerTwoColorState = null
+                                colorsRestored = false
+                            } else if (previousPlayerOneColor != null || previousPlayerTwoColor != null) {
+                                // First -1: restore previous colors
+                                playerOneColorState = previousPlayerOneColor
+                                playerTwoColorState = previousPlayerTwoColor
+                                colorsRestored = true
+                            } else {
+                                // Previous frame had no colors, so clear current colors
+                                playerOneColorState = null
+                                playerTwoColorState = null
+                                colorsRestored = false
+                            }
                             
-                            // Get who currently has "to break" and show color selection for the other player
-                            val currentBreak = currentBreakPlayer ?: normalizedP1Name
-                            val nonBreakPlayer = if (currentBreak == normalizedP1Name) normalizedP2Name else normalizedP1Name
-                            
-                            // Check if this is a break situation (break player clicking -1)
-                            val isBreak = currentBreak == normalizedP1Name
-                            
-                            // Store who had "to break" BEFORE the dialog opens
-                            breakPlayerBeforeDialog = currentBreak
-                            isBreakSituation = isBreak // Track if this is a break situation
-                            pendingBreakPlayer = nonBreakPlayer
-                            pendingFrameAction = Pair(normalizedP1Name, -1) // -1 = decrement
-                            isForNewFrame = true
-                            showColorSelection = true
-                            return@PlayerHalf
+                            // Decrement the score
+                            playerOneScore--
+                            // Remove last frame if it exists and was for this player
+                            if (frameHistory.isNotEmpty() && frameHistory.last().player == normalizedP1Name) {
+                                frameHistory = frameHistory.dropLast(1)
+                                if (gameMode == GameMode.FIRST_TO && currentSetFrames.isNotEmpty() && currentSetFrames.last().player == normalizedP1Name) {
+                                    currentSetFrames = currentSetFrames.dropLast(1)
+                                }
+                            }
+                            // Re-enable game if score dropped below target
+                            if (gameMode == GameMode.RACE_TO && playerOneScore < targetScore) {
+                                currentGameEnded = false
+                            }
+                            // setEnded is computed from winConditions, no need to set it manually
+                            val newFrameCount = playerOneScore + playerTwoScore
+                            if (gameMode == GameMode.BEST_OF && newFrameCount < targetScore) {
+                                currentGameEnded = false
+                            }
                         }
                     },
                     onDish = {
                         if (!gameEnded && !setEnded && !currentGameEnded) {
-                            // Show color selection dialog for every frame (when clicking Dish)
-                            // Reset any previous state to ensure clean start
-                            selectedColor = null
-                            pendingBreakPlayer = null
-                            pendingFrameAction = null
-                            isForNewFrame = false
+                            // Store previous colors before resetting
+                            previousPlayerOneColor = playerOneColorState
+                            previousPlayerTwoColor = playerTwoColorState
                             
-                            // Always show color selection for the non-breaker (the opposite of who has "to break")
+                            // Reset colors (show "Set Color" again)
+                            playerOneColorState = null
+                            playerTwoColorState = null
+                            colorsRestored = false
+                            
+                            // Determine dish type based on who is breaking
                             val currentBreak = playerToBreak ?: normalizedP1Name
-                            val nonBreakPlayer = if (currentBreak == normalizedP1Name) normalizedP2Name else normalizedP1Name
+                            val dishType = if (currentBreak == normalizedP1Name) {
+                                DishType.BREAK_DISH
+                            } else {
+                                DishType.REVERSE_DISH
+                            }
                             
-                            // Store who had "to break" BEFORE the dialog opens
-                            breakPlayerBeforeDialog = currentBreak
-                            // It's a break situation if someone is to break (regardless of who clicks)
-                            isBreakSituation = true // Always a break situation when someone is to break
-                            pendingBreakPlayer = nonBreakPlayer
-                            pendingFrameAction = Pair(normalizedP1Name, 0) // 0 = dish
-                            isForNewFrame = true
-                            showColorSelection = true
-                            return@PlayerHalf
+                            // Increment score and record dish
+                            playerOneScore++
+                            val frame = Frame(
+                                player = normalizedP1Name,
+                                scoreChange = 1,
+                                timestamp = Date(),
+                                playerOneScore = playerOneScore,
+                                playerTwoScore = playerTwoScore,
+                                dishType = dishType
+                            )
+                            frameHistory = frameHistory + frame
+                            if (gameMode == GameMode.FIRST_TO) {
+                                currentSetFrames = currentSetFrames + frame
+                            }
+                            // Check win conditions
+                            val newFrameCount = playerOneScore + playerTwoScore
+                            if (gameMode == GameMode.BEST_OF && newFrameCount >= targetScore) {
+                                currentGameEnded = true
+                            }
                         }
                     },
                     modifier = Modifier
@@ -630,7 +724,7 @@ fun ScoreboardScreen(
                 PlayerHalf(
                     playerName = displayP2Name,
                     score = playerTwoScore,
-                    gamesWon = if (gameMode == GameMode.BEST_OF) playerTwoGamesWon else null,
+                    gamesWon = null,
                     isWinner = playerTwoWon,
                     isEnabled = !gameEnded && !setEnded && !currentGameEnded,
                     backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -638,135 +732,128 @@ fun ScoreboardScreen(
                     isToBreak = p2ToBreak,
                     ballColor = playerTwoColorState,
                     isLandscape = isLandscape,
+                    onSelectColor = {
+                        colorSelectionPlayer = normalizedP2Name
+                        showColorSelection = true
+                    },
                     onIncrement = {
                         if (!gameEnded && !setEnded && !currentGameEnded) {
-                            // Show color selection dialog at the start of every frame (when clicking +1)
-                            // Reset any previous state to ensure clean start
-                            selectedColor = null
-                            pendingBreakPlayer = null
-                            pendingFrameAction = null
-                            isForNewFrame = false
+                            // Store previous colors before resetting
+                            previousPlayerOneColor = playerOneColorState
+                            previousPlayerTwoColor = playerTwoColorState
                             
-                            // Always show color selection for the non-breaker (the opposite of who has "to break")
-                            val currentBreak = playerToBreak ?: normalizedP2Name
-                            val nonBreakPlayer = if (currentBreak == normalizedP1Name) normalizedP2Name else normalizedP1Name
+                            // Reset colors (show "Set Color" again)
+                            playerOneColorState = null
+                            playerTwoColorState = null
+                            colorsRestored = false
                             
-                            // Store who had "to break" BEFORE the dialog opens
-                            breakPlayerBeforeDialog = currentBreak
-                            // It's a break situation if someone is to break (regardless of who clicks)
-                            isBreakSituation = true // Always a break situation when someone is to break
-                            pendingBreakPlayer = nonBreakPlayer
-                            
-                            // The action player is who clicked +1, not who the dialog is for
-                            pendingFrameAction = Pair(normalizedP2Name, 1) // 1 = increment
-                            isForNewFrame = true
-                            showColorSelection = true
-                            return@PlayerHalf
+                            // Increment the score
+                            playerTwoScore++
+                            // Record frame
+                            val frame = Frame(
+                                player = normalizedP2Name,
+                                scoreChange = 1,
+                                timestamp = Date(),
+                                playerOneScore = playerOneScore,
+                                playerTwoScore = playerTwoScore,
+                                dishType = null
+                            )
+                            frameHistory = frameHistory + frame
+                            if (gameMode == GameMode.FIRST_TO) {
+                                currentSetFrames = currentSetFrames + frame
+                            }
+                            // Check win conditions
+                            val newFrameCount = playerOneScore + playerTwoScore
+                            if (gameMode == GameMode.BEST_OF && newFrameCount >= targetScore) {
+                                currentGameEnded = true
+                            }
                         }
                     },
                     onDecrement = {
-                        if (playerTwoScore > 0 && !gameEnded && !setEnded && !currentGameEnded) {
-                            // Show color selection dialog when clicking -1 (same as +1)
-                            // Reset any previous state to ensure clean start
-                            selectedColor = null
-                            pendingBreakPlayer = null
-                            pendingFrameAction = null
-                            isForNewFrame = false
+                        // Allow decrement if score > 0 (can always undo to recover from accidental presses)
+                        if (playerTwoScore > 0) {
+                            // Color restoration logic: first -1 restores, second -1 clears
+                            if (colorsRestored) {
+                                // Second -1: clear colors
+                                playerOneColorState = null
+                                playerTwoColorState = null
+                                colorsRestored = false
+                            } else if (previousPlayerOneColor != null || previousPlayerTwoColor != null) {
+                                // First -1: restore previous colors
+                                playerOneColorState = previousPlayerOneColor
+                                playerTwoColorState = previousPlayerTwoColor
+                                colorsRestored = true
+                            } else {
+                                // Previous frame had no colors, so clear current colors
+                                playerOneColorState = null
+                                playerTwoColorState = null
+                                colorsRestored = false
+                            }
                             
-                            // Get who currently has "to break" and show color selection for the other player
-                            val currentBreak = currentBreakPlayer ?: normalizedP2Name
-                            val nonBreakPlayer = if (currentBreak == normalizedP1Name) normalizedP2Name else normalizedP1Name
-                            
-                            // Check if this is a break situation (break player clicking -1)
-                            val isBreak = currentBreak == normalizedP2Name
-                            
-                            // Store who had "to break" BEFORE the dialog opens
-                            breakPlayerBeforeDialog = currentBreak
-                            isBreakSituation = isBreak // Track if this is a break situation
-                            pendingBreakPlayer = nonBreakPlayer
-                            pendingFrameAction = Pair(normalizedP2Name, -1) // -1 = decrement
-                            isForNewFrame = true
-                            showColorSelection = true
-                            return@PlayerHalf
+                            // Decrement the score
+                            playerTwoScore--
+                            // Remove last frame if it exists and was for this player
+                            if (frameHistory.isNotEmpty() && frameHistory.last().player == normalizedP2Name) {
+                                frameHistory = frameHistory.dropLast(1)
+                                if (gameMode == GameMode.FIRST_TO && currentSetFrames.isNotEmpty() && currentSetFrames.last().player == normalizedP2Name) {
+                                    currentSetFrames = currentSetFrames.dropLast(1)
+                                }
+                            }
+                            // Re-enable game if score dropped below target
+                            if (gameMode == GameMode.RACE_TO && playerTwoScore < targetScore) {
+                                currentGameEnded = false
+                            }
+                            // setEnded is computed from winConditions, no need to set it manually
+                            val newFrameCount = playerOneScore + playerTwoScore
+                            if (gameMode == GameMode.BEST_OF && newFrameCount < targetScore) {
+                                currentGameEnded = false
+                            }
                         }
                     },
                     onDish = {
                         if (!gameEnded && !setEnded && !currentGameEnded) {
-                            // Show color selection dialog for every frame (when clicking Dish)
-                            // Reset any previous state to ensure clean start
-                            selectedColor = null
-                            pendingBreakPlayer = null
-                            pendingFrameAction = null
-                            isForNewFrame = false
+                            // Store previous colors before resetting
+                            previousPlayerOneColor = playerOneColorState
+                            previousPlayerTwoColor = playerTwoColorState
                             
-                            // Always show color selection for the non-breaker (the opposite of who has "to break")
+                            // Reset colors (show "Set Color" again)
+                            playerOneColorState = null
+                            playerTwoColorState = null
+                            colorsRestored = false
+                            
+                            // Determine dish type based on who is breaking
                             val currentBreak = playerToBreak ?: normalizedP2Name
-                            val nonBreakPlayer = if (currentBreak == normalizedP1Name) normalizedP2Name else normalizedP1Name
+                            val dishType = if (currentBreak == normalizedP2Name) {
+                                DishType.BREAK_DISH
+                            } else {
+                                DishType.REVERSE_DISH
+                            }
                             
-                            // Store who had "to break" BEFORE the dialog opens
-                            breakPlayerBeforeDialog = currentBreak
-                            // It's a break situation if someone is to break (regardless of who clicks)
-                            isBreakSituation = true // Always a break situation when someone is to break
-                            pendingBreakPlayer = nonBreakPlayer
-                            pendingFrameAction = Pair(normalizedP2Name, 0) // 0 = dish
-                            isForNewFrame = true
-                            showColorSelection = true
-                            return@PlayerHalf
+                            // Increment score and record dish
+                            playerTwoScore++
+                            val frame = Frame(
+                                player = normalizedP2Name,
+                                scoreChange = 1,
+                                timestamp = Date(),
+                                playerOneScore = playerOneScore,
+                                playerTwoScore = playerTwoScore,
+                                dishType = dishType
+                            )
+                            frameHistory = frameHistory + frame
+                            if (gameMode == GameMode.FIRST_TO) {
+                                currentSetFrames = currentSetFrames + frame
+                            }
+                            // Check win conditions
+                            val newFrameCount = playerOneScore + playerTwoScore
+                            if (gameMode == GameMode.BEST_OF && newFrameCount >= targetScore) {
+                                currentGameEnded = true
+                            }
                         }
                     },
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
                 )
-            }
-
-            // Dish - automatically determine type based on break player
-            LaunchedEffect(showDishDialog, dishPlayer, currentBreakPlayer) {
-                val currentDishPlayer = dishPlayer
-                val currentBreak = currentBreakPlayer
-                if (showDishDialog && currentDishPlayer != null && currentBreak != null) {
-                    // Determine dish type: if the player who clicked dish is the break player, it's a break dish
-                    val dishType = if (currentDishPlayer == currentBreak) {
-                        DishType.BREAK_DISH
-                    } else {
-                        DishType.REVERSE_DISH
-                    }
-                    
-                    // Increment the score for the player who dished
-                    if (currentDishPlayer == normalizedP1Name) {
-                        playerOneScore++
-                    } else {
-                        playerTwoScore++
-                    }
-                    
-                    // Create a frame with dish information
-                    val newFrame = Frame(
-                        timestamp = Date(),
-                        player = currentDishPlayer,
-                        scoreChange = 1, // Dish increments score
-                        playerOneScore = playerOneScore,
-                        playerTwoScore = playerTwoScore,
-                        dishType = dishType
-                    )
-                    frameHistory = frameHistory + newFrame
-                    currentSetFrames = currentSetFrames + newFrame
-                    
-                    // Check win conditions after dish
-                    val newFrameCount = playerOneScore + playerTwoScore
-                    if (gameMode == GameMode.BEST_OF && newFrameCount >= targetScore) {
-                        currentGameEnded = true
-                    }
-                    if (gameMode == GameMode.FIRST_TO) {
-                        if (playerOneScore >= targetScore) {
-                            playerOneSetsWon++
-                        } else if (playerTwoScore >= targetScore) {
-                            playerTwoSetsWon++
-                        }
-                    }
-                    
-                    showDishDialog = false
-                    dishPlayer = null
-                }
             }
 
             // Action buttons at the bottom
@@ -792,6 +879,13 @@ fun ScoreboardScreen(
                             )
                             completedSets = completedSets + newSet
                             
+                            // Increment sets won for the winner
+                            if (playerOneScore >= targetScore) {
+                                playerOneSetsWon++
+                            } else if (playerTwoScore >= targetScore) {
+                                playerTwoSetsWon++
+                            }
+                            
                             // Reset scores for new set
                             playerOneScore = 0
                             playerTwoScore = 0
@@ -799,16 +893,8 @@ fun ScoreboardScreen(
                             
                             // Calculate who breaks next based on completed frames (alternates)
                             val nextBreakPlayer = getNextBreakPlayer()
-                            
-                            // Store who had "to break" BEFORE the dialog opens (the winner of the previous set)
-                            breakPlayerBeforeDialog = currentBreakPlayer
-                            // New set is always a break situation
-                            isBreakSituation = true
-                            
-                            // Show color selection dialog for new set
-                            pendingBreakPlayer = nextBreakPlayer
-                            isForNewFrame = true
-                            showColorSelection = true
+                            currentBreakPlayer = nextBreakPlayer
+                            // Colors will reset automatically when scores go to 0-0
                         },
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(
@@ -1025,193 +1111,38 @@ fun ScoreboardScreen(
         }
         
         // Break selection dialog for new sets
-        if (showBreakSelection) {
-            AlertDialog(
-                onDismissRequest = { showBreakSelection = false },
-                title = {
-                    Text("Who Breaks First?")
-                },
-                text = {
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Button(
-                            onClick = {
-                                pendingBreakPlayer = normalizedP1Name
-                                showBreakSelection = false
-                                showColorSelection = true
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = displayP1Name,
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.padding(vertical = 4.dp)
-                            )
-                        }
-                        
-                        Button(
-                            onClick = {
-                                pendingBreakPlayer = normalizedP2Name
-                                showBreakSelection = false
-                                showColorSelection = true
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = displayP2Name,
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.padding(vertical = 4.dp)
-                            )
+        // Handle color selection
+        LaunchedEffect(selectedColor, colorSelectionPlayer) {
+            if (selectedColor != null && colorSelectionPlayer != null && !showColorSelection) {
+                // Assign color to the selected player
+                when (colorSelectionPlayer) {
+                    normalizedP1Name -> {
+                        playerOneColorState = selectedColor
+                        // If player 1 selected a color, assign the opposite to player 2
+                        if (selectedColor == BallColor.RED) {
+                            playerTwoColorState = BallColor.YELLOW
+                        } else if (selectedColor == BallColor.YELLOW) {
+                            playerTwoColorState = BallColor.RED
                         }
                     }
-                },
-                confirmButton = {},
-                dismissButton = {
-                    TextButton(
-                        onClick = { showBreakSelection = false }
-                    ) {
-                        Text("Cancel")
+                    normalizedP2Name -> {
+                        playerTwoColorState = selectedColor
+                        // If player 2 selected a color, assign the opposite to player 1
+                        if (selectedColor == BallColor.RED) {
+                            playerOneColorState = BallColor.YELLOW
+                        } else if (selectedColor == BallColor.YELLOW) {
+                            playerOneColorState = BallColor.RED
+                        }
                     }
                 }
-            )
-        }
-        
-        // Color selection dialog for new sets and new frames
-        LaunchedEffect(selectedColor, pendingBreakPlayer, isForNewFrame, pendingFrameAction, showColorSelection) {
-            // Process color selection when a color is selected and dialog is closed
-            if (selectedColor != null && pendingBreakPlayer != null && !showColorSelection) {
-                val breakP = pendingBreakPlayer!! // This is the non-breaker
-                val selectedColorValue = selectedColor!!
-                
-                // Use a small delay to ensure state is stable
-                kotlinx.coroutines.delay(50)
-                
-                when (selectedColorValue) {
-                    BallColor.FOUL_BREAK -> {
-                        // Foul break: switch break player and show color selection again
-                        val newBreakPlayer = if (breakP == normalizedP1Name) normalizedP2Name else normalizedP1Name
-                        pendingBreakPlayer = newBreakPlayer
-                        selectedColor = null
-                        showColorSelection = true
-                    }
-                    BallColor.RED, BallColor.YELLOW -> {
-                        // Switch break player to the opposite of who had "to break" BEFORE the dialog opened
-                        // This happens when Red or Yellow is clicked, not when the frame ends
-                        val breakBeforeDialog = breakPlayerBeforeDialog ?: currentBreakPlayer ?: normalizedP1Name
-                        val newBreakPlayer = if (breakBeforeDialog == normalizedP1Name) normalizedP2Name else normalizedP1Name
-                        currentBreakPlayer = newBreakPlayer
-                        
-                        // Reset the stored break player
-                        breakPlayerBeforeDialog = null
-                        
-                        // Assign colors: the player who selected the color (breakP) gets the selected color
-                        // The other player gets the opposite color
-                        if (selectedColorValue == BallColor.RED) {
-                            if (breakP == normalizedP1Name) {
-                                playerOneColorState = BallColor.RED
-                                playerTwoColorState = BallColor.YELLOW
-                            } else {
-                                playerOneColorState = BallColor.YELLOW
-                                playerTwoColorState = BallColor.RED
-                            }
-                        } else {
-                            if (breakP == normalizedP1Name) {
-                                playerOneColorState = BallColor.YELLOW
-                                playerTwoColorState = BallColor.RED
-                            } else {
-                                playerOneColorState = BallColor.RED
-                                playerTwoColorState = BallColor.YELLOW
-                            }
-                        }
-                        
-                        // Execute the pending action (increment, decrement, or dish)
-                        if (isForNewFrame && pendingFrameAction != null) {
-                            val (actionPlayer, scoreChange) = pendingFrameAction!!
-                            
-                            when (scoreChange) {
-                                0 -> {
-                                    // Execute dish action
-                                    dishPlayer = actionPlayer
-                                    showDishDialog = true
-                                }
-                                1 -> {
-                                    // Execute increment action - update the score
-                                    if (actionPlayer == normalizedP1Name) {
-                                        playerOneScore++
-                                        val newFrame = Frame(
-                                            timestamp = Date(),
-                                            player = normalizedP1Name,
-                                            scoreChange = 1,
-                                            playerOneScore = playerOneScore,
-                                            playerTwoScore = playerTwoScore
-                                        )
-                                        frameHistory = frameHistory + newFrame
-                                        currentSetFrames = currentSetFrames + newFrame
-                                        // Break player will be updated by LaunchedEffect when frame ends
-                                    } else {
-                                        playerTwoScore++
-                                        val newFrame = Frame(
-                                            timestamp = Date(),
-                                            player = normalizedP2Name,
-                                            scoreChange = 1,
-                                            playerOneScore = playerOneScore,
-                                            playerTwoScore = playerTwoScore
-                                        )
-                                        frameHistory = frameHistory + newFrame
-                                        currentSetFrames = currentSetFrames + newFrame
-                                        // Break player will be updated by LaunchedEffect when frame ends
-                                    }
-                                }
-                                -1 -> {
-                                    // Execute decrement action - remove the last frame and decrement score
-                                    if (actionPlayer == normalizedP1Name && playerOneScore > 0) {
-                                        val lastFrame = frameHistory.lastOrNull()
-                                        if (lastFrame != null && lastFrame.player == normalizedP1Name) {
-                                            frameHistory = frameHistory.dropLast(1)
-                                            currentSetFrames = currentSetFrames.dropLast(1)
-                                        }
-                                        playerOneScore--
-                                        
-                                        // Check if decrementing brought the game back below target - re-enable game
-                                        val newFrameCount = playerOneScore + playerTwoScore
-                                        if (gameMode == GameMode.BEST_OF && newFrameCount < targetScore) {
-                                            currentGameEnded = false
-                                        }
-                                    } else if (actionPlayer == normalizedP2Name && playerTwoScore > 0) {
-                                        val lastFrame = frameHistory.lastOrNull()
-                                        if (lastFrame != null && lastFrame.player == normalizedP2Name) {
-                                            frameHistory = frameHistory.dropLast(1)
-                                            currentSetFrames = currentSetFrames.dropLast(1)
-                                        }
-                                        playerTwoScore--
-                                        
-                                        // Check if decrementing brought the game back below target - re-enable game
-                                        val newFrameCount = playerOneScore + playerTwoScore
-                                        if (gameMode == GameMode.BEST_OF && newFrameCount < targetScore) {
-                                            currentGameEnded = false
-                                        }
-                                    }
-                                }
-                            }
-                            
-                            // Reset state after processing - IMPORTANT: reset all state so dialog can show again
-                            pendingFrameAction = null
-                            isForNewFrame = false
-                        }
-                        
-                        // Reset state - ensure everything is cleared for next frame
-                        selectedColor = null
-                        pendingBreakPlayer = null
-                    }
-                }
+                colorsRestored = false // Reset flag when colors are manually set
+                selectedColor = null
+                colorSelectionPlayer = null
             }
         }
         
-        if (showColorSelection && pendingBreakPlayer != null) {
-            val breakPlayerName = if (pendingBreakPlayer == normalizedP1Name) {
+        if (showColorSelection && colorSelectionPlayer != null) {
+            val playerName = if (colorSelectionPlayer == normalizedP1Name) {
                 displayP1Name
             } else {
                 displayP2Name
@@ -1220,117 +1151,57 @@ fun ScoreboardScreen(
             AlertDialog(
                 onDismissRequest = { 
                     showColorSelection = false
-                    pendingBreakPlayer = null
+                    colorSelectionPlayer = null
                     selectedColor = null
-                    pendingFrameAction = null
-                    isForNewFrame = false
                 },
                 title = {
-                    Text("Select Color for $breakPlayerName")
+                    Text("Select Color for $playerName")
                 },
                 text = {
                     if (isLandscape) {
-                        // Landscape: Use grid layout (2 columns)
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        // Landscape: Use horizontal layout
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            // Red button
+                            Button(
+                                onClick = {
+                                    showColorSelection = false
+                                    selectedColor = BallColor.RED
+                                },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFFDC143C) // Red color
+                                )
                             ) {
-                                // Red button
-                                Button(
-                                    onClick = {
-                                        showColorSelection = false
-                                        selectedColor = BallColor.RED
-                                    },
-                                    modifier = Modifier.weight(1f),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = Color(0xFFDC143C) // Red color
-                                    )
-                                ) {
-                                    Text(
-                                        text = "Red",
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = Color.White,
-                                        modifier = Modifier.padding(vertical = 4.dp)
-                                    )
-                                }
-                                
-                                // Yellow button
-                                Button(
-                                    onClick = {
-                                        showColorSelection = false
-                                        selectedColor = BallColor.YELLOW
-                                    },
-                                    modifier = Modifier.weight(1f),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = Color(0xFFFFD700) // Yellow/Gold color
-                                    )
-                                ) {
-                                    Text(
-                                        text = "Yellow",
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = Color.Black,
-                                        modifier = Modifier.padding(vertical = 4.dp)
-                                    )
-                                }
+                                Text(
+                                    text = "Red",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color.White,
+                                    modifier = Modifier.padding(vertical = 4.dp)
+                                )
                             }
                             
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            // Yellow button
+                            Button(
+                                onClick = {
+                                    showColorSelection = false
+                                    selectedColor = BallColor.YELLOW
+                                },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFFFFD700) // Yellow/Gold color
+                                )
                             ) {
-                                // Foul break button - only show if this is a break situation (not after Open Table)
-                                if (isBreakSituation) {
-                                    Button(
-                                        onClick = {
-                                            showColorSelection = false
-                                            selectedColor = BallColor.FOUL_BREAK
-                                        },
-                                        modifier = Modifier.weight(1f),
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = MaterialTheme.colorScheme.errorContainer
-                                        )
-                                    ) {
-                                        Text(
-                                            text = "Foul Break",
-                                            fontSize = 16.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.onErrorContainer,
-                                            modifier = Modifier.padding(vertical = 4.dp)
-                                        )
-                                    }
-                                }
-                                
-                                // Open Table button - show on every color selection dialog
-                                Button(
-                                    onClick = {
-                                        // Switch to the opposite player and keep dialog open
-                                        pendingBreakPlayer = if (pendingBreakPlayer == normalizedP1Name) {
-                                            normalizedP2Name
-                                        } else {
-                                            normalizedP1Name
-                                        }
-                                        // After Open Table is selected, it's no longer a break situation
-                                        isBreakSituation = false
-                                        // Dialog stays open with new player name
-                                    },
-                                    modifier = Modifier.weight(1f),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.tertiary
-                                    )
-                                ) {
-                                    Text(
-                                        text = "Open Table",
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onTertiary,
-                                        modifier = Modifier.padding(vertical = 4.dp)
-                                    )
-                                }
+                                Text(
+                                    text = "Yellow",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color.Black,
+                                    modifier = Modifier.padding(vertical = 4.dp)
+                                )
                             }
                         }
                     } else {
@@ -1377,55 +1248,6 @@ fun ScoreboardScreen(
                                     modifier = Modifier.padding(vertical = 4.dp)
                                 )
                             }
-                            
-                            // Foul break button - only show if this is a break situation (not after Open Table)
-                            if (isBreakSituation) {
-                                Button(
-                                    onClick = {
-                                        showColorSelection = false
-                                        selectedColor = BallColor.FOUL_BREAK
-                                    },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.errorContainer
-                                    )
-                                ) {
-                                    Text(
-                                        text = "Foul Break",
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onErrorContainer,
-                                        modifier = Modifier.padding(vertical = 4.dp)
-                                    )
-                                }
-                            }
-                            
-                            // Open Table button - show on every color selection dialog
-                            Button(
-                                onClick = {
-                                    // Switch to the opposite player and keep dialog open
-                                    pendingBreakPlayer = if (pendingBreakPlayer == normalizedP1Name) {
-                                        normalizedP2Name
-                                    } else {
-                                        normalizedP1Name
-                                    }
-                                    // After Open Table is selected, it's no longer a break situation
-                                    isBreakSituation = false
-                                    // Dialog stays open with new player name
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.tertiary
-                                )
-                            ) {
-                                Text(
-                                    text = "Open Table",
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onTertiary,
-                                    modifier = Modifier.padding(vertical = 4.dp)
-                                )
-                            }
                         }
                     }
                 },
@@ -1434,10 +1256,8 @@ fun ScoreboardScreen(
                     TextButton(
                         onClick = { 
                             showColorSelection = false
-                            pendingBreakPlayer = null
+                            colorSelectionPlayer = null
                             selectedColor = null
-                            pendingFrameAction = null
-                            isForNewFrame = false
                         }
                     ) {
                         Text("Cancel")
@@ -1464,7 +1284,7 @@ fun PlayerHalf(
     onIncrement: () -> Unit,
     onDecrement: () -> Unit,
     onDish: () -> Unit,
-    onOpenTable: (() -> Unit)? = null,
+    onSelectColor: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     // Adjust sizes for landscape
@@ -1494,33 +1314,57 @@ fun PlayerHalf(
             ) {
                 // Top section: Player name and games won
                 Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .offset(x = 12.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = playerName,
-                            fontSize = playerNameSize,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.padding(bottom = 4.dp)
-                        )
-                        // Display ball color indicator
-                        ballColor?.let { color ->
-                            Surface(
-                                shape = MaterialTheme.shapes.small,
-                                color = when (color) {
-                                    BallColor.RED -> Color(0xFFDC143C)
-                                    BallColor.YELLOW -> Color(0xFFFFD700)
-                                    BallColor.FOUL_BREAK -> Color.Transparent
-                                },
-                                modifier = Modifier
-                                    .size(if (isLandscape) 16.dp else 20.dp)
-                                    .padding(bottom = 4.dp)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Text(
+                                text = playerName,
+                                fontSize = playerNameSize,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            // Display ball color indicator or "Set Color" button
+                            Box(
+                                modifier = Modifier.width(if (isLandscape) 80.dp else 70.dp),
+                                contentAlignment = Alignment.Center
                             ) {
-                                // Empty surface for color indicator
+                                if (ballColor != null) {
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = when (ballColor) {
+                                            BallColor.RED -> Color(0xFFDC143C)
+                                            BallColor.YELLOW -> Color(0xFFFFD700)
+                                            BallColor.FOUL_BREAK -> Color.Transparent
+                                        },
+                                        modifier = Modifier.size(if (isLandscape) 24.dp else 20.dp)
+                                    ) {
+                                        // Empty surface for color indicator
+                                    }
+                                } else {
+                                    TextButton(
+                                        onClick = onSelectColor,
+                                        modifier = Modifier.height(if (isLandscape) 32.dp else 28.dp),
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                                    ) {
+                                        Text(
+                                            text = "Set Color",
+                                            fontSize = if (isLandscape) 15.sp else 10.sp,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Visible
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -1538,7 +1382,9 @@ fun PlayerHalf(
 
                 // Buttons in a row
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Button(
@@ -1651,33 +1497,57 @@ fun PlayerHalf(
             ) {
                 // Top section: Player name and games won
                 Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .offset(x = 12.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = playerName,
-                            fontSize = playerNameSize,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                        // Display ball color indicator
-                        ballColor?.let { color ->
-                            Surface(
-                                shape = MaterialTheme.shapes.small,
-                                color = when (color) {
-                                    BallColor.RED -> Color(0xFFDC143C)
-                                    BallColor.YELLOW -> Color(0xFFFFD700)
-                                    BallColor.FOUL_BREAK -> Color.Transparent
-                                },
-                                modifier = Modifier
-                                    .size(if (isLandscape) 16.dp else 20.dp)
-                                    .padding(bottom = 8.dp)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Text(
+                                text = playerName,
+                                fontSize = playerNameSize,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            // Display ball color indicator or "Set Color" button
+                            Box(
+                                modifier = Modifier.width(if (isLandscape) 80.dp else 70.dp),
+                                contentAlignment = Alignment.Center
                             ) {
-                                // Empty surface for color indicator
+                                if (ballColor != null) {
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = when (ballColor) {
+                                            BallColor.RED -> Color(0xFFDC143C)
+                                            BallColor.YELLOW -> Color(0xFFFFD700)
+                                            BallColor.FOUL_BREAK -> Color.Transparent
+                                        },
+                                        modifier = Modifier.size(if (isLandscape) 24.dp else 20.dp)
+                                    ) {
+                                        // Empty surface for color indicator
+                                    }
+                                } else {
+                                    TextButton(
+                                        onClick = onSelectColor,
+                                        modifier = Modifier.height(if (isLandscape) 32.dp else 28.dp),
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                                    ) {
+                                        Text(
+                                            text = "Set Color",
+                                            fontSize = if (isLandscape) 15.sp else 10.sp,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Visible
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -1695,7 +1565,9 @@ fun PlayerHalf(
 
                 // Control buttons - vertical
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(buttonSpacing)
                 ) {
                     Button(

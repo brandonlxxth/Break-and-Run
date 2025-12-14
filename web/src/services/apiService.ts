@@ -9,11 +9,12 @@ export class ApiService {
 
   // Get current user ID from Supabase session
   private async getUserIdInternal(): Promise<string> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    // First check if we have a session
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) {
       throw new Error('User not authenticated');
     }
-    return user.id;
+    return session.user.id;
   }
 
   // Helper to access serialization methods

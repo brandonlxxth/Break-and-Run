@@ -49,7 +49,17 @@ export class UnifiedGameRepository {
   // Save active game
   async saveActiveGame(activeGame: ActiveGame | null): Promise<void> {
     if (this.useApi) {
-      await apiService.saveActiveGame(activeGame);
+      try {
+        await apiService.saveActiveGame(activeGame);
+      } catch (error) {
+        // If API fails due to auth, fall back to localStorage
+        if (error instanceof Error && error.message.includes('not authenticated')) {
+          console.warn('User not authenticated, falling back to localStorage');
+          gameRepository.saveActiveGame(activeGame);
+        } else {
+          throw error;
+        }
+      }
     } else {
       gameRepository.saveActiveGame(activeGame);
     }

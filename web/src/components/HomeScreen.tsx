@@ -16,26 +16,38 @@ import HistoryIcon from '@mui/icons-material/History';
 import SportsBarIcon from '@mui/icons-material/SportsBar';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import CloseIcon from '@mui/icons-material/Close';
+import LoginIcon from '@mui/icons-material/Login';
+import LogoutIcon from '@mui/icons-material/Logout';
 import { ActiveGame } from '../data/types';
 import { formatNameForDisplay } from '../utils/nameUtils';
+import { useAuth } from '../contexts/AuthContext';
 
 interface HomeScreenProps {
   activeGame: ActiveGame | null;
+  user: { id: string; email: string | undefined } | null;
   onNewGameClick: () => void;
   onResumeGameClick: () => void;
   onPastGamesClick: () => void;
   onCancelActiveGame?: () => void;
+  onLoginClick: () => void;
 }
 
 export default function HomeScreen({
   activeGame,
+  user,
   onNewGameClick,
   onResumeGameClick,
   onPastGamesClick,
   onCancelActiveGame,
+  onLoginClick,
 }: HomeScreenProps) {
   const theme = useTheme();
+  const { signOut } = useAuth();
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
 
   return (
     <Box
@@ -75,6 +87,36 @@ export default function HomeScreen({
       />
 
       <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1, py: { xs: 3, sm: 4, md: 6 }, px: { xs: 2, sm: 3 } }}>
+        {/* Auth Section */}
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+          {user ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+                {user.email}
+              </Typography>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={handleSignOut}
+                startIcon={<LogoutIcon />}
+                sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+              >
+                Sign Out
+              </Button>
+            </Box>
+          ) : (
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={onLoginClick}
+              startIcon={<LoginIcon />}
+              sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+            >
+              Login
+            </Button>
+          )}
+        </Box>
+
         {/* Hero Section */}
         <Fade in timeout={800}>
           <Box sx={{ textAlign: 'center', mb: { xs: 4, sm: 5, md: 6 } }}>

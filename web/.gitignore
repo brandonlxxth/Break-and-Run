@@ -26,6 +26,11 @@ build
 # Vercel
 .vercel
 
+# Supabase local files
+.supabase
+supabase/.temp
+supabase/.branches
+
 # Vite cache
 .vite
 

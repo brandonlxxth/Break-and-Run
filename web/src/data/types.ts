@@ -7,9 +7,9 @@ export enum GameMode {
 }
 
 export const GameModeDisplayNames: Record<GameMode, string> = {
-  [GameMode.RACE_TO]: "Race to",
-  [GameMode.FIRST_TO]: "Sets of",
-  [GameMode.BEST_OF]: "Best of",
+  [GameMode.RACE_TO]: "Race To",
+  [GameMode.FIRST_TO]: "Sets Of",
+  [GameMode.BEST_OF]: "Best Of",
   [GameMode.FREE_PLAY]: "Free Play"
 };
 

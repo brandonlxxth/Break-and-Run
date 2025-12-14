@@ -65,11 +65,11 @@ export default function GameScreen({ onBackClick, onCreateGame }: GameScreenProp
         </Typography>
       </Box>
 
-      <Box sx={{ p: 3, maxWidth: 600, mx: 'auto' }}>
+      <Box sx={{ p: { xs: 2, sm: 3 }, maxWidth: 600, mx: 'auto' }}>
         {/* Game Mode Selection */}
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Typography variant="subtitle1" gutterBottom sx={{ mb: 2, textAlign: 'center', color: 'text.primary' }}>
+        <Card sx={{ mb: { xs: 2, sm: 3 } }}>
+          <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+            <Typography variant="subtitle1" gutterBottom sx={{ mb: { xs: 1.5, sm: 2 }, textAlign: 'center', color: 'text.primary', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
               {GameModeDisplayNames[gameMode]}
             </Typography>
             <ToggleButtonGroup
@@ -77,29 +77,37 @@ export default function GameScreen({ onBackClick, onCreateGame }: GameScreenProp
               exclusive
               onChange={(_, value) => value && setGameMode(value)}
               fullWidth
-              sx={{ mb: 2 }}
+              sx={{ mb: { xs: 1.5, sm: 2 } }}
             >
               {Object.values(GameMode).map((mode) => (
-                <ToggleButton key={mode} value={mode}>
+                <ToggleButton 
+                  key={mode} 
+                  value={mode} 
+                  sx={{ 
+                    fontSize: { xs: '0.75rem', sm: '0.875rem' }, 
+                    py: { xs: 1, sm: 1.5 },
+                    textTransform: 'none'
+                  }}
+                >
                   {GameModeDisplayNames[mode]}
                 </ToggleButton>
               ))}
             </ToggleButtonGroup>
 
             {gameMode !== GameMode.FREE_PLAY && (
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: { xs: 1.5, sm: 2 } }}>
                 <IconButton
                   onClick={() => setTargetScore(Math.max(1, targetScore - 1))}
-                  sx={{ fontSize: '2rem' }}
+                  sx={{ fontSize: { xs: '1.5rem', sm: '2rem' }, minWidth: { xs: 44, sm: 40 }, minHeight: { xs: 44, sm: 40 } }}
                 >
                   −
                 </IconButton>
-                <Typography variant="h3" fontWeight="bold" sx={{ color: 'text.primary' }}>
+                <Typography variant="h3" fontWeight="bold" sx={{ color: 'text.primary', fontSize: { xs: '2.5rem', sm: '3rem' } }}>
                   {targetScore}
                 </Typography>
                 <IconButton
                   onClick={() => setTargetScore(targetScore + 1)}
-                  sx={{ fontSize: '2rem' }}
+                  sx={{ fontSize: { xs: '1.5rem', sm: '2rem' }, minWidth: { xs: 44, sm: 40 }, minHeight: { xs: 44, sm: 40 } }}
                 >
                   +
                 </IconButton>
@@ -109,19 +117,29 @@ export default function GameScreen({ onBackClick, onCreateGame }: GameScreenProp
         </Card>
 
         {/* Player Names */}
-        <Card sx={{ mb: 3 }}>
-          <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Card sx={{ mb: { xs: 2, sm: 3 } }}>
+          <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 1.5, sm: 2 }, p: { xs: 2, sm: 3 } }}>
             <TextField
               label="Player 1 Name"
               value={playerOneName}
               onChange={(e) => setPlayerOneName(e.target.value)}
               fullWidth
+              sx={{
+                '& .MuiInputBase-root': {
+                  fontSize: { xs: '0.875rem', sm: '1rem' },
+                },
+              }}
             />
             <TextField
               label="Player 2 Name"
               value={playerTwoName}
               onChange={(e) => setPlayerTwoName(e.target.value)}
               fullWidth
+              sx={{
+                '& .MuiInputBase-root': {
+                  fontSize: { xs: '0.875rem', sm: '1rem' },
+                },
+              }}
             />
           </CardContent>
         </Card>
@@ -132,22 +150,31 @@ export default function GameScreen({ onBackClick, onCreateGame }: GameScreenProp
           fullWidth
           size="large"
           onClick={() => setShowBreakSelection(true)}
-          sx={{ py: 1.5, fontSize: '1.25rem', fontWeight: 'bold' }}
+          sx={{ 
+            py: { xs: 1.25, sm: 1.5 }, 
+            fontSize: { xs: '1rem', sm: '1.25rem' }, 
+            fontWeight: 'bold',
+            minHeight: { xs: 48, sm: 'auto' }
+          }}
         >
           Create Game
         </Button>
       </Box>
 
       {/* Break Selection Dialog */}
-      <Dialog open={showBreakSelection} onClose={() => setShowBreakSelection(false)}>
-        <DialogTitle>Who Breaks First?</DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 250 }}>
+      <Dialog open={showBreakSelection} onClose={() => setShowBreakSelection(false)} fullWidth maxWidth="xs">
+        <DialogTitle sx={{ fontSize: { xs: '1.125rem', sm: '1.25rem' } }}>Who Breaks First?</DialogTitle>
+        <DialogContent sx={{ px: { xs: 2, sm: 3 }, pb: { xs: 2, sm: 3 } }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 1.5, sm: 2 }, minWidth: { xs: 'auto', sm: 250 } }}>
             <Button
               variant="contained"
               fullWidth
               onClick={() => handleCreateGame(playerOneName || 'Player 1')}
-              sx={{ py: 1.5 }}
+              sx={{ 
+                py: { xs: 1.25, sm: 1.5 },
+                fontSize: { xs: '0.9rem', sm: '1rem' },
+                minHeight: { xs: 48, sm: 'auto' }
+              }}
             >
               {formatNameForDisplay(playerOneName || 'Player 1')}
             </Button>
@@ -155,14 +182,23 @@ export default function GameScreen({ onBackClick, onCreateGame }: GameScreenProp
               variant="contained"
               fullWidth
               onClick={() => handleCreateGame(playerTwoName || 'Player 2')}
-              sx={{ py: 1.5 }}
+              sx={{ 
+                py: { xs: 1.25, sm: 1.5 },
+                fontSize: { xs: '0.9rem', sm: '1rem' },
+                minHeight: { xs: 48, sm: 'auto' }
+              }}
             >
               {formatNameForDisplay(playerTwoName || 'Player 2')}
             </Button>
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowBreakSelection(false)}>Cancel</Button>
+        <DialogActions sx={{ px: { xs: 2, sm: 3 }, pb: { xs: 2, sm: 3 } }}>
+          <Button 
+            onClick={() => setShowBreakSelection(false)}
+            sx={{ fontSize: { xs: '0.875rem', sm: '1rem' }, minHeight: { xs: 44, sm: 'auto' } }}
+          >
+            Cancel
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

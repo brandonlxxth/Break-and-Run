@@ -80,20 +80,20 @@ export default function PastGamesScreen({
         sx={{
           display: 'flex',
           alignItems: 'center',
-          p: 2,
+          p: { xs: 1.5, sm: 2 },
           bgcolor: 'primary.main',
           color: 'primary.contrastText',
         }}
       >
-        <IconButton onClick={onBackClick} sx={{ color: 'inherit', mr: 1 }}>
-          <ArrowBackIcon />
+        <IconButton onClick={onBackClick} sx={{ color: 'inherit', mr: { xs: 0.5, sm: 1 }, minWidth: { xs: 44, sm: 40 }, minHeight: { xs: 44, sm: 40 } }}>
+          <ArrowBackIcon sx={{ fontSize: { xs: 24, sm: 20 } }} />
         </IconButton>
-        <Typography variant="h6" fontWeight="bold">
+        <Typography variant="h6" fontWeight="bold" sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
           Past Games
         </Typography>
       </Box>
 
-      <Box sx={{ p: 2, maxWidth: 800, mx: 'auto' }}>
+      <Box sx={{ p: { xs: 1.5, sm: 2 }, maxWidth: 800, mx: 'auto' }}>
         {games.map((game) => {
           const isExpanded = expandedGameId === game.id;
           const duration = game.endTime.getTime() - game.startTime.getTime();
@@ -124,25 +124,25 @@ export default function PastGamesScreen({
               sx={{ mb: 2, cursor: 'pointer' }}
               onClick={() => setExpandedGameId(isExpanded ? null : game.id)}
             >
-              <CardContent>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Box sx={{ flex: 1 }}>
-                    <Typography variant="h6" fontWeight="semiBold" sx={{ color: 'text.primary' }}>
+              <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: { xs: 1, sm: 2 }, flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="h6" fontWeight="semiBold" sx={{ color: 'text.primary', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
                       {formatNameForDisplay(game.playerOneName)} vs{' '}
                       {formatNameForDisplay(game.playerTwoName)}
                     </Typography>
-                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                    <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
                       {game.date.toLocaleDateString()}
                     </Typography>
                   </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Box sx={{ textAlign: 'right', mr: 1 }}>
-                      <Typography variant="h6" fontWeight="bold" sx={{ color: 'primary.main' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 } }}>
+                    <Box sx={{ textAlign: 'right', mr: { xs: 0.5, sm: 1 } }}>
+                      <Typography variant="h6" fontWeight="bold" sx={{ color: 'primary.main', fontSize: { xs: '1.125rem', sm: '1.25rem' } }}>
                         {game.gameMode === GameMode.FIRST_TO && game.sets.length > 0
                           ? `${game.playerOneSetsWon} - ${game.playerTwoSetsWon}`
                           : `${game.playerOneScore} - ${game.playerTwoScore}`}
                       </Typography>
-                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                      <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
                         {game.winner
                           ? `Winner: ${formatNameForDisplay(game.winner)}`
                           : 'Draw'}
@@ -154,27 +154,27 @@ export default function PastGamesScreen({
                         e.stopPropagation();
                         setDeleteConfirmId(game.id);
                       }}
-                      sx={{ color: 'error.main' }}
+                      sx={{ color: 'error.main', minWidth: { xs: 40, sm: 32 }, minHeight: { xs: 40, sm: 32 } }}
                     >
-                      <DeleteIcon />
+                      <DeleteIcon sx={{ fontSize: { xs: 20, sm: 18 } }} />
                     </IconButton>
                   </Box>
                 </Box>
 
-                <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
+                <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
                   {game.gameMode === GameMode.FREE_PLAY
                     ? GameModeDisplayNames[game.gameMode]
                     : `${GameModeDisplayNames[game.gameMode]}: ${game.targetScore}`}
                 </Typography>
 
                 {game.frameHistory.length > 0 && (
-                  <Box sx={{ mt: 1, display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                  <Box sx={{ mt: 1, display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: { xs: 1, sm: 0 } }}>
+                    <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
                       Start: {game.startTime.toLocaleTimeString()}
                       <br />
                       End: {game.endTime.toLocaleTimeString()}
                     </Typography>
-                    <Typography variant="caption" sx={{ textAlign: 'right', color: 'text.secondary' }}>
+                    <Typography variant="caption" sx={{ textAlign: { xs: 'left', sm: 'right' }, color: 'text.secondary', fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
                       Duration: {durationMinutes}m {durationSecs}s
                       <br />
                       {avgMinutes > 0 ? (
@@ -190,7 +190,7 @@ export default function PastGamesScreen({
                   <Divider sx={{ my: 2 }} />
                   {game.gameMode === GameMode.FIRST_TO && game.sets.length > 0 ? (
                     <Box>
-                      <Typography variant="subtitle2" fontWeight="bold" gutterBottom sx={{ color: 'text.primary' }}>
+                      <Typography variant="subtitle2" fontWeight="bold" gutterBottom sx={{ color: 'text.primary', fontSize: { xs: '0.9rem', sm: '1rem' } }}>
                         Set-by-Set Breakdown
                       </Typography>
                       {game.sets.map((set, index) => (
@@ -202,12 +202,12 @@ export default function PastGamesScreen({
                               mb: 1,
                             }}
                           >
-                            <Typography variant="body2" fontWeight="semiBold" sx={{ color: 'text.primary' }}>
+                            <Typography variant="body2" fontWeight="semiBold" sx={{ color: 'text.primary', fontSize: { xs: '0.875rem', sm: '0.875rem' } }}>
                               Set {set.setNumber}: {set.playerOneScore} - {set.playerTwoScore}
                             </Typography>
                             <Typography
                               variant="caption"
-                              sx={{ color: set.winner ? 'primary.main' : 'text.secondary' }}
+                              sx={{ color: set.winner ? 'primary.main' : 'text.secondary', fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
                             >
                               {set.winner
                                 ? `Winner: ${formatNameForDisplay(set.winner)}`
@@ -288,7 +288,7 @@ export default function PastGamesScreen({
                     </Box>
                   ) : (
                     <Box>
-                      <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+                      <Typography variant="subtitle2" fontWeight="bold" gutterBottom sx={{ color: 'text.primary', fontSize: { xs: '0.9rem', sm: '1rem' } }}>
                         Frame-by-Frame Breakdown
                       </Typography>
                       {game.frameHistory.map((frame, index) => {

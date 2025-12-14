@@ -74,25 +74,25 @@ export default function HomeScreen({
         }}
       />
 
-      <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1, py: 6 }}>
+      <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1, py: { xs: 3, sm: 4, md: 6 }, px: { xs: 2, sm: 3 } }}>
         {/* Hero Section */}
         <Fade in timeout={800}>
-          <Box sx={{ textAlign: 'center', mb: 6 }}>
+          <Box sx={{ textAlign: 'center', mb: { xs: 4, sm: 5, md: 6 } }}>
             <Box
               sx={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 1,
-                mb: 2,
-                px: 2,
+                mb: { xs: 1.5, sm: 2 },
+                px: { xs: 1.5, sm: 2 },
                 py: 0.5,
                 borderRadius: 3,
                 bgcolor: 'primary.main',
                 color: 'white',
               }}
             >
-              <SportsBarIcon />
-              <Typography variant="body2" fontWeight="bold">
+              <SportsBarIcon sx={{ fontSize: { xs: 18, sm: 24 } }} />
+              <Typography variant="body2" fontWeight="bold" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                 Pool Scoreboard App
               </Typography>
             </Box>
@@ -101,14 +101,15 @@ export default function HomeScreen({
               variant="h1"
               component="h1"
               sx={{
-                fontSize: { xs: '3rem', sm: '4.5rem', md: '5.5rem' },
+                fontSize: { xs: '2rem', sm: '3.5rem', md: '5.5rem' },
                 fontWeight: 900,
                 background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
                 backgroundClip: 'text',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
-                mb: 2,
+                mb: { xs: 1.5, sm: 2 },
                 lineHeight: 1.1,
+                px: { xs: 1, sm: 0 },
               }}
             >
               Break & Run
@@ -118,11 +119,13 @@ export default function HomeScreen({
               variant="h5"
               sx={{
                 color: 'text.secondary',
-                mb: 4,
+                mb: { xs: 3, sm: 4 },
                 maxWidth: 600,
                 mx: 'auto',
                 fontWeight: 300,
-                fontSize: { xs: '1.1rem', sm: '1.5rem' },
+                fontSize: { xs: '0.95rem', sm: '1.25rem', md: '1.5rem' },
+                px: { xs: 1, sm: 0 },
+                lineHeight: { xs: 1.4, sm: 1.5 },
               }}
             >
               Track your pool games with style. Simple, fast, and always ready when you need it.
@@ -133,32 +136,32 @@ export default function HomeScreen({
               sx={{
                 display: 'flex',
                 justifyContent: 'center',
-                gap: 4,
+                gap: { xs: 2, sm: 3, md: 4 },
                 flexWrap: 'wrap',
-                mb: 6,
+                mb: { xs: 4, sm: 5, md: 6 },
               }}
             >
               <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="h4" fontWeight="bold" sx={{ color: 'primary.main' }}>
+                <Typography variant="h4" fontWeight="bold" sx={{ color: 'primary.main', fontSize: { xs: '1.5rem', sm: '2rem', md: '2.125rem' } }}>
                   Multiple
                 </Typography>
-                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                   Game Modes
                 </Typography>
               </Box>
               <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="h4" fontWeight="bold" sx={{ color: 'secondary.main' }}>
+                <Typography variant="h4" fontWeight="bold" sx={{ color: 'secondary.main', fontSize: { xs: '1.5rem', sm: '2rem', md: '2.125rem' } }}>
                   Instant
                 </Typography>
-                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                   Score Tracking
                 </Typography>
               </Box>
               <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="h4" fontWeight="bold" sx={{ color: 'primary.main' }}>
+                <Typography variant="h4" fontWeight="bold" sx={{ color: 'primary.main', fontSize: { xs: '1.5rem', sm: '2rem', md: '2.125rem' } }}>
                   Always
                 </Typography>
-                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                   Accessible
                 </Typography>
               </Box>
@@ -219,28 +222,28 @@ export default function HomeScreen({
                         <CloseIcon />
                       </IconButton>
                     )}
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                      <PlayArrowIcon sx={{ fontSize: 40, color: 'rgba(0, 0, 0, 0.7)' }} />
-                      <Typography variant="h5" fontWeight="bold">
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, sm: 2 }, mb: { xs: 1.5, sm: 2 } }}>
+                      <PlayArrowIcon sx={{ fontSize: { xs: 32, sm: 40 }, color: 'rgba(0, 0, 0, 0.7)' }} />
+                      <Typography variant="h5" fontWeight="bold" sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
                         Resume Game
                       </Typography>
                     </Box>
-                    <Typography variant="body1" sx={{ mb: 2, opacity: 0.95 }}>
+                    <Typography variant="body1" sx={{ mb: { xs: 1.5, sm: 2 }, opacity: 0.95, fontSize: { xs: '0.875rem', sm: '1rem' } }}>
                       Continue your current match
                     </Typography>
                     <Box
                       sx={{
                         bgcolor: 'rgba(255, 255, 255, 0.2)',
                         borderRadius: 2,
-                        p: 2,
-                        mt: 2,
+                        p: { xs: 1.5, sm: 2 },
+                        mt: { xs: 1.5, sm: 2 },
                       }}
                     >
-                      <Typography variant="body2" fontWeight="medium">
+                      <Typography variant="body2" fontWeight="medium" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
                         {formatNameForDisplay(activeGame.playerOneName)} vs{' '}
                         {formatNameForDisplay(activeGame.playerTwoName)}
                       </Typography>
-                      <Typography variant="h6" fontWeight="bold" sx={{ mt: 1 }}>
+                      <Typography variant="h6" fontWeight="bold" sx={{ mt: 1, fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
                         {activeGame.playerOneScore} - {activeGame.playerTwoScore}
                       </Typography>
                     </Box>
@@ -280,14 +283,14 @@ export default function HomeScreen({
                   },
                 }}
               >
-                <CardContent sx={{ p: 4, position: 'relative', zIndex: 1 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                    <PlayArrowIcon sx={{ fontSize: 40 }} />
-                    <Typography variant="h5" fontWeight="bold">
+                <CardContent sx={{ p: { xs: 3, sm: 4 }, position: 'relative', zIndex: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, sm: 2 }, mb: { xs: 1.5, sm: 2 } }}>
+                    <PlayArrowIcon sx={{ fontSize: { xs: 32, sm: 40 } }} />
+                    <Typography variant="h5" fontWeight="bold" sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
                       New Game
                     </Typography>
                   </Box>
-                  <Typography variant="body1" sx={{ mb: 3, opacity: 0.95 }}>
+                  <Typography variant="body1" sx={{ mb: { xs: 2, sm: 3 }, opacity: 0.95, fontSize: { xs: '0.875rem', sm: '1rem' } }}>
                     Start tracking a new pool match
                   </Typography>
                   <Button
@@ -298,7 +301,9 @@ export default function HomeScreen({
                       bgcolor: 'white',
                       color: 'primary.main',
                       fontWeight: 'bold',
-                      py: 1.5,
+                      py: { xs: 1.25, sm: 1.5 },
+                      fontSize: { xs: '0.9rem', sm: '1rem' },
+                      minHeight: { xs: 44, sm: 'auto' },
                       '&:hover': {
                         bgcolor: 'rgba(255, 255, 255, 0.9)',
                         transform: 'scale(1.05)',
@@ -343,14 +348,14 @@ export default function HomeScreen({
                   },
                 }}
               >
-                <CardContent sx={{ p: 4, position: 'relative', zIndex: 1 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                    <HistoryIcon sx={{ fontSize: 40, color: 'white' }} />
-                    <Typography variant="h5" fontWeight="bold">
+                <CardContent sx={{ p: { xs: 3, sm: 4 }, position: 'relative', zIndex: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, sm: 2 }, mb: { xs: 1.5, sm: 2 } }}>
+                    <HistoryIcon sx={{ fontSize: { xs: 32, sm: 40 }, color: 'white' }} />
+                    <Typography variant="h5" fontWeight="bold" sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
                       Past Games
                     </Typography>
                   </Box>
-                  <Typography variant="body1" sx={{ mb: 3, opacity: 0.95 }}>
+                  <Typography variant="body1" sx={{ mb: { xs: 2, sm: 3 }, opacity: 0.95, fontSize: { xs: '0.875rem', sm: '1rem' } }}>
                     Review your game history and statistics
                   </Typography>
                   <Button
@@ -361,7 +366,9 @@ export default function HomeScreen({
                       borderColor: 'white',
                       color: 'white',
                       fontWeight: 'bold',
-                      py: 1.5,
+                      py: { xs: 1.25, sm: 1.5 },
+                      fontSize: { xs: '0.9rem', sm: '1rem' },
+                      minHeight: { xs: 44, sm: 'auto' },
                       '&:hover': {
                         borderColor: 'white',
                         bgcolor: 'rgba(255, 255, 255, 0.1)',
@@ -380,51 +387,51 @@ export default function HomeScreen({
 
         {/* Features Section */}
         <Fade in timeout={1600}>
-          <Box sx={{ mt: 8, mb: 4 }}>
+          <Box sx={{ mt: { xs: 4, sm: 6, md: 8 }, mb: { xs: 2, sm: 4 } }}>
             <Typography
               variant="h4"
               fontWeight="bold"
               textAlign="center"
-              sx={{ mb: 4, color: 'text.primary' }}
+              sx={{ mb: { xs: 3, sm: 4 }, color: 'text.primary', fontSize: { xs: '1.5rem', sm: '2rem', md: '2.125rem' } }}
             >
               Everything You Need
             </Typography>
             <Grid container spacing={3}>
               <Grid item xs={12} sm={6} md={3}>
-                <Box
-                  sx={{
-                    textAlign: 'center',
-                    p: 3,
-                    borderRadius: 3,
-                    bgcolor: 'background.paper',
-                    height: '100%',
-                    boxShadow: 2,
-                    transition: 'transform 0.2s ease',
-                    '&:hover': {
-                      transform: 'translateY(-4px)',
-                      boxShadow: 4,
-                    },
-                  }}
-                >
                   <Box
                     sx={{
-                      width: 60,
-                      height: 60,
+                      textAlign: 'center',
+                      p: { xs: 2, sm: 3 },
+                      borderRadius: 3,
+                      bgcolor: 'background.paper',
+                      height: '100%',
+                      boxShadow: 2,
+                      transition: 'transform 0.2s ease',
+                      '&:hover': {
+                        transform: 'translateY(-4px)',
+                        boxShadow: 4,
+                      },
+                    }}
+                  >
+                  <Box
+                    sx={{
+                      width: { xs: 50, sm: 60 },
+                      height: { xs: 50, sm: 60 },
                       borderRadius: '50%',
                       bgcolor: 'primary.light',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       mx: 'auto',
-                      mb: 2,
+                      mb: { xs: 1.5, sm: 2 },
                     }}
                   >
-                    <SportsBarIcon sx={{ fontSize: 30, color: 'primary.main' }} />
+                    <SportsBarIcon sx={{ fontSize: { xs: 24, sm: 30 }, color: 'primary.main' }} />
                   </Box>
-                  <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ color: 'text.primary' }}>
+                  <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ color: 'text.primary', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
                     Multiple Modes
                   </Typography>
-                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                  <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                     Race to, Sets of, Best of, and Free Play
                   </Typography>
                 </Box>
@@ -434,7 +441,7 @@ export default function HomeScreen({
                 <Box
                   sx={{
                     textAlign: 'center',
-                    p: 3,
+                    p: { xs: 2, sm: 3 },
                     borderRadius: 3,
                     bgcolor: 'background.paper',
                     height: '100%',
@@ -448,23 +455,23 @@ export default function HomeScreen({
                 >
                   <Box
                     sx={{
-                      width: 60,
-                      height: 60,
+                      width: { xs: 50, sm: 60 },
+                      height: { xs: 50, sm: 60 },
                       borderRadius: '50%',
                       bgcolor: 'secondary.light',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       mx: 'auto',
-                      mb: 2,
+                      mb: { xs: 1.5, sm: 2 },
                     }}
                   >
-                    <TrendingUpIcon sx={{ fontSize: 30, color: 'secondary.main' }} />
+                    <TrendingUpIcon sx={{ fontSize: { xs: 24, sm: 30 }, color: 'secondary.main' }} />
                   </Box>
-                  <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ color: 'text.primary' }}>
+                  <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ color: 'text.primary', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
                     Track Stats
                   </Typography>
-                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                  <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                     Frame-by-frame history and detailed breakdowns
                   </Typography>
                 </Box>
@@ -474,7 +481,7 @@ export default function HomeScreen({
                 <Box
                   sx={{
                     textAlign: 'center',
-                    p: 3,
+                    p: { xs: 2, sm: 3 },
                     borderRadius: 3,
                     bgcolor: 'background.paper',
                     height: '100%',
@@ -488,23 +495,23 @@ export default function HomeScreen({
                 >
                   <Box
                     sx={{
-                      width: 60,
-                      height: 60,
+                      width: { xs: 50, sm: 60 },
+                      height: { xs: 50, sm: 60 },
                       borderRadius: '50%',
                       bgcolor: 'success.light',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       mx: 'auto',
-                      mb: 2,
+                      mb: { xs: 1.5, sm: 2 },
                     }}
                   >
-                    <PlayArrowIcon sx={{ fontSize: 30, color: 'success.dark' }} />
+                    <PlayArrowIcon sx={{ fontSize: { xs: 24, sm: 30 }, color: 'success.dark' }} />
                   </Box>
-                  <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ color: 'text.primary' }}>
+                  <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ color: 'text.primary', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
                     Resume Anytime
                   </Typography>
-                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                  <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                     Games auto-save so you never lose progress
                   </Typography>
                 </Box>
@@ -514,7 +521,7 @@ export default function HomeScreen({
                 <Box
                   sx={{
                     textAlign: 'center',
-                    p: 3,
+                    p: { xs: 2, sm: 3 },
                     borderRadius: 3,
                     bgcolor: 'background.paper',
                     height: '100%',
@@ -528,23 +535,23 @@ export default function HomeScreen({
                 >
                   <Box
                     sx={{
-                      width: 60,
-                      height: 60,
+                      width: { xs: 50, sm: 60 },
+                      height: { xs: 50, sm: 60 },
                       borderRadius: '50%',
                       bgcolor: 'warning.light',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       mx: 'auto',
-                      mb: 2,
+                      mb: { xs: 1.5, sm: 2 },
                     }}
                   >
-                    <HistoryIcon sx={{ fontSize: 30, color: 'warning.dark' }} />
+                    <HistoryIcon sx={{ fontSize: { xs: 24, sm: 30 }, color: 'warning.dark' }} />
                   </Box>
-                  <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ color: 'text.primary' }}>
+                  <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ color: 'text.primary', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
                     Game History
                   </Typography>
-                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                  <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                     Review past matches and track your progress
                   </Typography>
                 </Box>

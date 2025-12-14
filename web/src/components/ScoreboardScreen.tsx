@@ -13,7 +13,6 @@ import {
   Chip,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import RemoveIcon from '@mui/icons-material/Remove';
 import StarIcon from '@mui/icons-material/Star';
 import { ActiveGame, Game, GameMode, GameModeDisplayNames, DishType, BallColor, Frame } from '../data/types';
 import { normalizeName, formatNameForDisplay } from '../utils/nameUtils';
@@ -496,17 +495,14 @@ export default function ScoreboardScreen({
       if (isWinner) {
         // Success/winner background (light green) - use dark text
         return '#000000';
-      } else if (isBreaking) {
-        // Primary/breaking background (light blue) - use dark text
-        return '#000000';
       } else {
-        // Normal background (dark paper) - use light text
+        // Normal background (dark paper) or breaking (no fill) - use light text
         return 'text.primary';
       }
     };
     
     const getSecondaryTextColor = () => {
-      if (isWinner || isBreaking) {
+      if (isWinner) {
         return 'rgba(0, 0, 0, 0.7)';
       } else {
         return 'text.secondary';
@@ -517,65 +513,179 @@ export default function ScoreboardScreen({
       <Card
         sx={{
           flex: 1,
-          bgcolor: isWinner ? 'success.light' : isBreaking ? 'primary.light' : 'background.paper',
-          border: isBreaking ? 2 : 0,
-          borderColor: 'primary.main',
+          bgcolor: isWinner ? 'success.light' : 'background.paper',
+          border: 3,
+          borderColor: isBreaking ? 'primary.main' : 'transparent',
+          boxShadow: isBreaking ? '0 0 20px rgba(144, 202, 249, 0.5), 0 4px 8px rgba(0, 0, 0, 0.2)' : '0 4px 8px rgba(0, 0, 0, 0.2)',
+          transition: 'all 0.3s ease',
+          position: 'relative',
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: 0,
         }}
       >
-        <CardContent sx={{ textAlign: 'center', py: 3 }}>
-          <Typography 
-            variant="h6" 
-            fontWeight="bold" 
-            gutterBottom
-            sx={{ color: getTextColor() }}
-          >
-            {displayName}
-          </Typography>
-          {gameMode === GameMode.BEST_OF && gamesWon !== undefined && (
+        <CardContent sx={{ 
+          textAlign: 'center', 
+          py: { xs: '1.5vh', sm: 3 },
+          px: { xs: 1, sm: 2 },
+          display: 'flex',
+          flexDirection: 'column',
+          flex: 1,
+          justifyContent: 'space-between',
+          minHeight: 0,
+          '@media (orientation: landscape) and (max-width: 900px)': {
+            py: '1vh',
+            px: 1,
+          },
+          '@media (orientation: portrait)': {
+            py: '1vh',
+          }
+        }}>
+          <Box sx={{ flexShrink: 0 }}>
             <Typography 
-              variant="body2" 
-              sx={{ color: getSecondaryTextColor() }}
+              variant="h6" 
+              fontWeight="bold" 
+              gutterBottom
+              sx={{ 
+                color: getTextColor(), 
+                fontSize: 'clamp(0.85rem, 2.5vw, 1.25rem)',
+                mb: { xs: '0.25vh', sm: '0.5vh' },
+                '@media (orientation: portrait)': {
+                  mb: '0.15vh',
+                }
+              }}
             >
-              Games: {gamesWon}
+              {displayName}
             </Typography>
-          )}
-          {gameMode === GameMode.FIRST_TO && setsWon !== undefined && (
-            <Typography 
-              variant="body2" 
-              sx={{ color: getSecondaryTextColor() }}
-            >
-              Sets: {setsWon}
-            </Typography>
-          )}
+            {gameMode === GameMode.BEST_OF && gamesWon !== undefined && (
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  color: getSecondaryTextColor(), 
+                  fontSize: 'clamp(0.65rem, 2vw, 0.875rem)',
+                  mb: { xs: '0.15vh', sm: '0.25vh' },
+                  '@media (orientation: portrait)': {
+                    mb: '0.1vh',
+                  }
+                }}
+              >
+                Games: {gamesWon}
+              </Typography>
+            )}
+            {gameMode === GameMode.FIRST_TO && setsWon !== undefined && (
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  color: getSecondaryTextColor(), 
+                  fontSize: 'clamp(0.65rem, 2vw, 0.875rem)',
+                  mb: { xs: '0.15vh', sm: '0.25vh' },
+                  '@media (orientation: portrait)': {
+                    mb: '0.1vh',
+                  }
+                }}
+              >
+                Sets: {setsWon}
+              </Typography>
+            )}
+          </Box>
+          
           <Typography 
             variant="h2" 
             fontWeight="bold" 
-            sx={{ my: 2, color: getTextColor() }}
+            sx={{ 
+              color: getTextColor(), 
+              fontSize: 'clamp(2rem, 8vw, 4.5rem)',
+              my: { xs: '0.5vh', sm: '1vh' },
+              flexShrink: 0,
+              '@media (orientation: portrait)': {
+                my: '0.25vh',
+              }
+            }}
           >
             {score}
           </Typography>
+          
           {/* Fixed height container for chips to prevent button movement */}
-          <Box sx={{ minHeight: 40, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 1 }}>
+          <Box sx={{ 
+            minHeight: '3vh',
+            display: 'flex', 
+            flexDirection: 'column', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            gap: 0.5, 
+            mb: { xs: '0.25vh', sm: '0.5vh' },
+            flexShrink: 0,
+            '@media (orientation: portrait)': {
+              minHeight: '2.5vh',
+              mb: '0.15vh',
+            }
+          }}>
             {isBreaking && (
-              <Chip label="Breaking" size="small" color="primary" />
+              <Chip 
+                label="Breaking" 
+                size="small" 
+                color="primary" 
+                sx={{ 
+                  fontSize: 'clamp(0.6rem, 1.8vw, 0.75rem)',
+                  fontWeight: 'bold',
+                  boxShadow: '0 2px 8px rgba(144, 202, 249, 0.4)',
+                  border: '1px solid rgba(144, 202, 249, 0.6)'
+                }} 
+              />
             )}
             {isWinner && (
-              <Chip label="Winner!" size="small" color="success" />
+              <Chip 
+                label="Winner!" 
+                size="small" 
+                color="success" 
+                sx={{ 
+                  fontSize: 'clamp(0.6rem, 1.8vw, 0.75rem)',
+                }} 
+              />
             )}
           </Box>
-          <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', mt: 2 }}>
-            <IconButton
+          
+          <Box sx={{ 
+            display: 'flex', 
+            gap: '1vw', 
+            justifyContent: 'center', 
+            flexWrap: 'wrap',
+            flexShrink: 0,
+            mt: { xs: 'auto', sm: 'auto' },
+            pb: { xs: '0.25vh', sm: '0.5vh' },
+            '@media (orientation: portrait)': {
+              mt: '0.5vh',
+              pb: '0.15vh',
+            }
+          }}>
+            <Button
+              variant="contained"
               onClick={() => handleDecrement(isPlayerOne ? 'p1' : 'p2')}
               disabled={score === 0 || gameEnded}
               color="error"
+              sx={{ 
+                minWidth: 'clamp(80px, 20vw, 120px)',
+                minHeight: 'clamp(44px, 6vh, 52px)',
+                fontSize: 'clamp(0.9rem, 3vw, 1.1rem)',
+                px: 'clamp(1.5rem, 4vw, 2.5rem)',
+                py: 'clamp(0.75rem, 2vh, 1rem)',
+                fontWeight: 'bold',
+              }}
             >
-              <RemoveIcon />
-            </IconButton>
+              -1
+            </Button>
             <Button
               variant="contained"
               onClick={() => handleIncrement(isPlayerOne ? 'p1' : 'p2')}
               disabled={gameEnded || setEnded || currentGameEnded}
-              sx={{ minWidth: 100 }}
+              sx={{ 
+                minWidth: 'clamp(80px, 20vw, 120px)',
+                minHeight: 'clamp(44px, 6vh, 52px)',
+                fontSize: 'clamp(0.9rem, 3vw, 1.1rem)',
+                px: 'clamp(1.5rem, 4vw, 2.5rem)',
+                py: 'clamp(0.75rem, 2vh, 1rem)',
+                fontWeight: 'bold',
+              }}
             >
               +1
             </Button>
@@ -584,15 +694,18 @@ export default function ScoreboardScreen({
               onClick={() => handleDish(isPlayerOne ? 'p1' : 'p2')}
               disabled={gameEnded || setEnded || currentGameEnded}
               sx={{
-                minWidth: 100,
+                minWidth: 'clamp(80px, 20vw, 120px)',
+                minHeight: 'clamp(44px, 6vh, 52px)',
                 background: 'linear-gradient(135deg, #9c27b0 0%, #ba68c8 50%, #ce93d8 100%)',
                 color: '#ffffff',
                 fontWeight: 'bold',
-                fontSize: '1rem',
+                fontSize: 'clamp(0.9rem, 3vw, 1.1rem)',
                 boxShadow: '0 4px 15px rgba(156, 39, 176, 0.4)',
                 border: '1px solid rgba(255, 255, 255, 0.2)',
                 position: 'relative',
                 overflow: 'hidden',
+                px: 'clamp(1.5rem, 4vw, 2.5rem)',
+                py: 'clamp(0.75rem, 2vh, 1rem)',
                 '&:hover': {
                   background: 'linear-gradient(135deg, #8e24aa 0%, #ab47bc 50%, #ba68c8 100%)',
                   boxShadow: '0 6px 20px rgba(156, 39, 176, 0.6)',
@@ -619,7 +732,9 @@ export default function ScoreboardScreen({
                   left: '100%',
                 },
               }}
-              startIcon={<StarIcon sx={{ fontSize: '1.2rem' }} />}
+              startIcon={<StarIcon sx={{ 
+                fontSize: 'clamp(1rem, 3vw, 1.3rem)',
+              }} />}
             >
               Dish
             </Button>
@@ -630,14 +745,26 @@ export default function ScoreboardScreen({
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+    <Box sx={{ 
+      minHeight: '100vh', 
+      height: '100vh',
+      bgcolor: 'background.default',
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden'
+    }}>
       <Box
         sx={{
           display: 'flex',
           alignItems: 'center',
-          p: 2,
+          p: { xs: 1.5, sm: 2 },
           bgcolor: 'primary.main',
           color: 'primary.contrastText',
+          flexShrink: 0,
+          gap: 1,
+          '@media (orientation: landscape) and (max-width: 900px)': {
+            p: 1,
+          }
         }}
       >
         <IconButton
@@ -663,89 +790,334 @@ export default function ScoreboardScreen({
             };
             onBackClick(savedGame);
           }}
-          sx={{ color: 'inherit', mr: 1 }}
+          sx={{ color: 'inherit', minWidth: { xs: 44, sm: 40 }, minHeight: { xs: 44, sm: 40 }, flexShrink: 0 }}
         >
-          <ArrowBackIcon />
+          <ArrowBackIcon sx={{ fontSize: { xs: 24, sm: 20 } }} />
         </IconButton>
-        <Box sx={{ flex: 1 }}>
-          <Typography variant="h6" fontWeight="bold" sx={{ color: 'primary.contrastText' }}>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography variant="h6" fontWeight="bold" sx={{ 
+            color: 'primary.contrastText', 
+            fontSize: { xs: '1rem', sm: '1.25rem' },
+            '@media (orientation: landscape) and (max-width: 900px)': {
+              fontSize: '0.9rem',
+            }
+          }}>
             {gameMode === GameMode.FREE_PLAY
               ? GameModeDisplayNames[gameMode]
               : `${GameModeDisplayNames[gameMode]} ${targetScore}`}
           </Typography>
           {gameMode === GameMode.FIRST_TO && (
-            <Typography variant="caption" sx={{ color: 'primary.contrastText', opacity: 0.9 }}>
+            <Typography variant="caption" sx={{ 
+              color: 'primary.contrastText', 
+              opacity: 0.9, 
+              fontSize: { xs: '0.7rem', sm: '0.75rem' },
+              '@media (orientation: landscape) and (max-width: 900px)': {
+                fontSize: '0.65rem',
+              }
+            }}>
               Sets: {playerOneSetsWon} - {playerTwoSetsWon}
             </Typography>
           )}
         </Box>
+        
+        {/* Abbreviated Aggregate Stats in Header - Show in landscape */}
+        {aggregateStats && (
+          <Box sx={{
+            display: 'none',
+            '@media (orientation: landscape)': {
+              display: 'flex',
+            },
+            alignItems: 'center',
+            gap: { xs: 0.5, sm: 0.75 },
+            px: { xs: 0.75, sm: 1 },
+            py: { xs: 0.25, sm: 0.5 },
+            borderRadius: 1,
+            bgcolor: 'rgba(255, 255, 255, 0.1)',
+            flexShrink: 0,
+            maxWidth: { xs: '40%', sm: '50%' },
+          }}>
+            <Typography variant="caption" sx={{ 
+              color: 'primary.contrastText', 
+              fontSize: 'clamp(0.6rem, 1.5vw, 0.75rem)',
+              fontWeight: 'bold',
+              whiteSpace: 'nowrap',
+            }}>
+              {displayP1}: <Box component="span" sx={{ color: 'rgba(255, 255, 255, 0.9)' }}>{aggregateStats.p1Wins}</Box>
+            </Typography>
+            <Box sx={{ 
+              width: 1, 
+              height: 14, 
+              bgcolor: 'rgba(255, 255, 255, 0.3)',
+              mx: 0.25,
+            }} />
+            <Typography variant="caption" sx={{ 
+              color: 'primary.contrastText', 
+              fontSize: 'clamp(0.6rem, 1.5vw, 0.75rem)',
+              fontWeight: 'bold',
+              whiteSpace: 'nowrap',
+            }}>
+              {aggregateStats.p1Wins + aggregateStats.p2Wins + aggregateStats.draws}
+            </Typography>
+            <Box sx={{ 
+              width: 1, 
+              height: 14, 
+              bgcolor: 'rgba(255, 255, 255, 0.3)',
+              mx: 0.25,
+            }} />
+            <Typography variant="caption" sx={{ 
+              color: 'primary.contrastText', 
+              fontSize: 'clamp(0.6rem, 1.5vw, 0.75rem)',
+              fontWeight: 'bold',
+              whiteSpace: 'nowrap',
+            }}>
+              {displayP2}: <Box component="span" sx={{ color: 'rgba(255, 255, 255, 0.9)' }}>{aggregateStats.p2Wins}</Box>
+            </Typography>
+            {aggregateStats.draws > 0 && (
+              <>
+                <Box sx={{ 
+                  width: 1, 
+                  height: 14, 
+                  bgcolor: 'rgba(255, 255, 255, 0.3)',
+                  mx: 0.25,
+                }} />
+                <Typography variant="caption" sx={{ 
+                  color: 'primary.contrastText', 
+                  fontSize: 'clamp(0.6rem, 1.5vw, 0.75rem)',
+                  opacity: 0.8,
+                  whiteSpace: 'nowrap',
+                }}>
+                  {aggregateStats.draws}D
+                </Typography>
+              </>
+            )}
+          </Box>
+        )}
+        
         <Button
           variant="contained"
           color="error"
           onClick={() => setShowEndGameDialog(true)}
           size="small"
+          sx={{ 
+            minHeight: { xs: 36, sm: 32 },
+            fontSize: { xs: '0.75rem', sm: '0.875rem' },
+            px: { xs: 1.5, sm: 2 },
+            flexShrink: 0,
+            '@media (orientation: landscape) and (max-width: 900px)': {
+              minHeight: 32,
+              fontSize: '0.7rem',
+              px: 1,
+            }
+          }}
         >
           End Match
         </Button>
       </Box>
 
-      {/* Aggregate Stats Card */}
+      {/* Aggregate Stats Card - Show only in portrait */}
       {aggregateStats && (
-        <Box sx={{ p: 2, pb: 0 }}>
+        <Box sx={{ 
+          p: { xs: 1.25, sm: 2 }, 
+          pb: 0,
+          flexShrink: 0,
+          display: 'block',
+          '@media (orientation: landscape)': {
+            display: 'none',
+          },
+          '@media (max-width: 430px)': {
+            p: 1,
+            pb: 0,
+          }
+        }}>
           <Card
             sx={{
               bgcolor: 'background.paper',
               boxShadow: 4,
+              '@media (orientation: landscape) and (max-width: 900px)': {
+                boxShadow: 2,
+              }
             }}
           >
-            <CardContent>
+            <CardContent sx={{ 
+              p: { xs: 2, sm: 3 },
+              '@media (orientation: landscape) and (max-width: 900px)': {
+                p: 1,
+                py: 0.75,
+              }
+            }}>
               <Box
                 sx={{
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  gap: 2,
+                  gap: { xs: 1, sm: 2 },
+                  '@media (orientation: landscape) and (max-width: 900px)': {
+                    gap: 1.5,
+                  }
                 }}
               >
                 {/* Player 1 stats */}
-                <Box sx={{ flex: 1, textAlign: 'left' }}>
-                  <Typography variant="body2" sx={{ mb: 0.5, color: 'text.secondary' }}>
-                    {displayP1}
+                <Box sx={{ 
+                  flex: 1, 
+                  textAlign: 'left', 
+                  minWidth: 0,
+                  '@media (orientation: landscape) and (max-width: 900px)': {
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    textAlign: 'left',
+                  }
+                }}>
+                  <Typography variant="body2" sx={{ 
+                    mb: 0.5, 
+                    color: 'text.secondary', 
+                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                    '@media (orientation: landscape) and (max-width: 900px)': {
+                      fontSize: '0.75rem',
+                      mb: 0,
+                      minWidth: 'fit-content',
+                    }
+                  }}>
+                    {displayP1}:
                   </Typography>
-                  <Typography variant="h4" fontWeight="bold" sx={{ color: 'primary.main' }}>
-                    {aggregateStats.p1Wins}
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                    wins
-                  </Typography>
+                  <Box sx={{
+                    '@media (orientation: landscape) and (max-width: 900px)': {
+                      display: 'flex',
+                      alignItems: 'baseline',
+                      gap: 0.5,
+                    }
+                  }}>
+                    <Typography variant="h4" fontWeight="bold" sx={{ 
+                      color: 'primary.main', 
+                      fontSize: { xs: '1.75rem', sm: '2.125rem' },
+                      '@media (orientation: landscape) and (max-width: 900px)': {
+                        fontSize: '1.25rem',
+                      }
+                    }}>
+                      {aggregateStats.p1Wins}
+                    </Typography>
+                    <Typography variant="caption" sx={{ 
+                      color: 'text.secondary', 
+                      fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                      '@media (orientation: landscape) and (max-width: 900px)': {
+                        fontSize: '0.7rem',
+                        display: 'inline',
+                      }
+                    }}>
+                      wins
+                    </Typography>
+                  </Box>
                 </Box>
 
                 {/* Center divider with total */}
-                <Box sx={{ textAlign: 'center', px: 2 }}>
-                  <Typography variant="h6" fontWeight="bold" sx={{ color: 'text.primary' }}>
-                    {aggregateStats.p1Wins + aggregateStats.p2Wins + aggregateStats.draws}
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                    total
-                  </Typography>
+                <Box sx={{ 
+                  textAlign: 'center', 
+                  px: { xs: 1, sm: 2 },
+                  '@media (orientation: landscape) and (max-width: 900px)': {
+                    px: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 0.25,
+                  }
+                }}>
+                  <Box sx={{
+                    '@media (orientation: landscape) and (max-width: 900px)': {
+                      display: 'flex',
+                      alignItems: 'baseline',
+                      gap: 0.5,
+                    }
+                  }}>
+                    <Typography variant="h6" fontWeight="bold" sx={{ 
+                      color: 'text.primary', 
+                      fontSize: { xs: '1.25rem', sm: '1.5rem' },
+                      '@media (orientation: landscape) and (max-width: 900px)': {
+                        fontSize: '1rem',
+                      }
+                    }}>
+                      {aggregateStats.p1Wins + aggregateStats.p2Wins + aggregateStats.draws}
+                    </Typography>
+                    <Typography variant="caption" sx={{ 
+                      color: 'text.secondary', 
+                      fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                      '@media (orientation: landscape) and (max-width: 900px)': {
+                        fontSize: '0.7rem',
+                        display: 'inline',
+                      }
+                    }}>
+                      total
+                    </Typography>
+                  </Box>
                   {aggregateStats.draws > 0 && (
-                    <Typography variant="caption" sx={{ display: 'block', mt: 0.5, color: 'text.secondary' }}>
+                    <Typography variant="caption" sx={{ 
+                      display: 'block', 
+                      mt: 0.5, 
+                      color: 'text.secondary', 
+                      fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                      '@media (orientation: landscape) and (max-width: 900px)': {
+                        fontSize: '0.65rem',
+                        mt: 0,
+                        display: 'inline',
+                        ml: 0.5,
+                      }
+                    }}>
                       {aggregateStats.draws} draw{aggregateStats.draws > 1 ? 's' : ''}
                     </Typography>
                   )}
                 </Box>
 
                 {/* Player 2 stats */}
-                <Box sx={{ flex: 1, textAlign: 'right' }}>
-                  <Typography variant="body2" sx={{ mb: 0.5, color: 'text.secondary' }}>
-                    {displayP2}
+                <Box sx={{ 
+                  flex: 1, 
+                  textAlign: 'right', 
+                  minWidth: 0,
+                  '@media (orientation: landscape) and (max-width: 900px)': {
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    justifyContent: 'flex-end',
+                    textAlign: 'right',
+                  }
+                }}>
+                  <Typography variant="body2" sx={{ 
+                    mb: 0.5, 
+                    color: 'text.secondary', 
+                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                    '@media (orientation: landscape) and (max-width: 900px)': {
+                      fontSize: '0.75rem',
+                      mb: 0,
+                      minWidth: 'fit-content',
+                    }
+                  }}>
+                    {displayP2}:
                   </Typography>
-                  <Typography variant="h4" fontWeight="bold" sx={{ color: 'primary.main' }}>
-                    {aggregateStats.p2Wins}
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                    wins
-                  </Typography>
+                  <Box sx={{
+                    '@media (orientation: landscape) and (max-width: 900px)': {
+                      display: 'flex',
+                      alignItems: 'baseline',
+                      gap: 0.5,
+                    }
+                  }}>
+                    <Typography variant="h4" fontWeight="bold" sx={{ 
+                      color: 'primary.main', 
+                      fontSize: { xs: '1.75rem', sm: '2.125rem' },
+                      '@media (orientation: landscape) and (max-width: 900px)': {
+                        fontSize: '1.25rem',
+                      }
+                    }}>
+                      {aggregateStats.p2Wins}
+                    </Typography>
+                    <Typography variant="caption" sx={{ 
+                      color: 'text.secondary', 
+                      fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                      '@media (orientation: landscape) and (max-width: 900px)': {
+                        fontSize: '0.7rem',
+                        display: 'inline',
+                      }
+                    }}>
+                      wins
+                    </Typography>
+                  </Box>
                 </Box>
               </Box>
             </CardContent>
@@ -753,7 +1125,20 @@ export default function ScoreboardScreen({
         </Box>
       )}
 
-      <Box sx={{ p: 2, display: 'flex', gap: 2, flexDirection: { xs: 'column', md: 'row' } }}>
+      <Box sx={{ 
+        p: { xs: 1.5, sm: 2 }, 
+        display: 'flex', 
+        gap: { xs: 2, sm: 3, md: 4 },
+        flexDirection: { xs: 'column', sm: 'row' },
+        flex: 1,
+        minHeight: 0,
+        overflow: 'auto',
+        '@media (orientation: landscape) and (max-width: 900px)': {
+          flexDirection: 'row',
+          gap: 2,
+          p: 1.5,
+        }
+      }}>
         <PlayerCard
           playerName={normalizedP1}
           displayName={displayP1}
@@ -770,6 +1155,56 @@ export default function ScoreboardScreen({
           gamesWon={playerTwoGamesWon}
           setsWon={playerTwoSetsWon}
         />
+      </Box>
+
+      {/* Pause Game Banner */}
+      <Box sx={{ 
+        p: { xs: '1.5vh', sm: '2vh' },
+        pt: { xs: '1vh', sm: '1.5vh' },
+        flexShrink: 0,
+      }}>
+        <Button
+          variant="outlined"
+          onClick={() => {
+            const savedGame: ActiveGame = {
+              id: activeGame?.id || crypto.randomUUID(),
+              playerOneName: normalizedP1,
+              playerTwoName: normalizedP2,
+              playerOneScore,
+              playerTwoScore,
+              playerOneGamesWon,
+              playerTwoGamesWon,
+              targetScore,
+              gameMode,
+              startTime,
+              frameHistory,
+              playerOneSetsWon,
+              playerTwoSetsWon,
+              completedSets,
+              breakPlayer: currentBreakPlayer,
+              playerOneColor: initialP1Color,
+              playerTwoColor: initialP2Color,
+            };
+            onBackClick(savedGame);
+          }}
+          fullWidth
+          sx={{
+            minHeight: 'clamp(48px, 7vh, 56px)',
+            fontSize: 'clamp(1rem, 3vw, 1.25rem)',
+            borderWidth: 2,
+            borderColor: 'primary.main',
+            color: 'primary.main',
+            fontWeight: 'bold',
+            textTransform: 'none',
+            '&:hover': {
+              borderWidth: 2,
+              borderColor: 'primary.dark',
+              bgcolor: 'rgba(144, 202, 249, 0.1)',
+            }
+          }}
+        >
+          Pause Game
+        </Button>
       </Box>
 
       {/* New Set Button - Show when set ends in "Sets of" mode */}

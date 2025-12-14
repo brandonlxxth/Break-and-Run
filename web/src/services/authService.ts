@@ -1,55 +1,32 @@
-import { supabaseConfig } from './supabase';
+import { supabase } from './supabase';
+import type { User } from '@supabase/supabase-js';
 
 export interface AuthUser {
   id: string;
   email: string | undefined;
 }
 
-// Store user in localStorage for session management
-const USER_STORAGE_KEY = 'breakandrun_user';
-const SESSION_STORAGE_KEY = 'breakandrun_session';
-
 export class AuthService {
-  // Sign up with email and password (using Argon2 via Edge Function)
+  // Sign up with email and password (using Supabase built-in auth)
   async signUp(email: string, password: string): Promise<{ user: AuthUser | null; error: Error | null }> {
     try {
-      if (!supabaseConfig.supabaseUrl) {
-        return { user: null, error: new Error('Supabase URL not configured. Please set VITE_SUPABASE_URL environment variable.') };
-      }
-      const response = await fetch(`${supabaseConfig.supabaseUrl}/functions/v1/auth-signup`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseConfig.supabaseKey}`,
-        },
-        body: JSON.stringify({ email, password }),
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
       });
 
-      // Handle empty responses (405, etc.)
-      const text = await response.text();
-      let data;
-      try {
-        data = text ? JSON.parse(text) : {};
-      } catch (e) {
-        console.error('Failed to parse response:', text);
-        return { user: null, error: new Error(`Server error: ${response.status} ${response.statusText}`) };
+      if (error) {
+        return { user: null, error: error };
       }
 
-      if (!response.ok) {
-        return { user: null, error: new Error(data.error || data.message || `Failed to sign up: ${response.status} ${response.statusText}`) };
-      }
-
-      if (data.user && data.token) {
-        // Store user and token in localStorage (auto sign in after signup)
-        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.user));
-        localStorage.setItem(SESSION_STORAGE_KEY, data.token);
-        return { user: data.user, error: null };
-      }
-      
       if (data.user) {
-        // Fallback if token is missing (shouldn't happen)
-        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.user));
-        return { user: data.user, error: null };
+        return { 
+          user: { 
+            id: data.user.id, 
+            email: data.user.email 
+          }, 
+          error: null 
+        };
       }
 
       return { user: null, error: new Error('No user data returned') };
@@ -59,46 +36,26 @@ export class AuthService {
     }
   }
 
-  // Sign in with email and password (using Argon2 via Edge Function)
+  // Sign in with email and password (using Supabase built-in auth)
   async signIn(email: string, password: string): Promise<{ user: AuthUser | null; error: Error | null }> {
     try {
-      if (!supabaseConfig.supabaseUrl) {
-        return { user: null, error: new Error('Supabase URL not configured. Please set VITE_SUPABASE_URL environment variable.') };
-      }
-      const response = await fetch(`${supabaseConfig.supabaseUrl}/functions/v1/auth-signin`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseConfig.supabaseKey}`,
-        },
-        body: JSON.stringify({ email, password }),
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
 
-      // Handle empty responses (405, etc.)
-      const text = await response.text();
-      let data;
-      try {
-        data = text ? JSON.parse(text) : {};
-      } catch (e) {
-        console.error('Failed to parse response:', text);
-        return { user: null, error: new Error(`Server error: ${response.status} ${response.statusText}`) };
+      if (error) {
+        return { user: null, error: error };
       }
 
-      if (!response.ok) {
-        return { user: null, error: new Error(data.error || data.message || `Failed to sign in: ${response.status} ${response.statusText}`) };
-      }
-
-      if (data.user && data.token) {
-        // Store user and token in localStorage
-        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.user));
-        localStorage.setItem(SESSION_STORAGE_KEY, data.token);
-        return { user: data.user, error: null };
-      }
-      
       if (data.user) {
-        // Fallback if token is missing (shouldn't happen)
-        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.user));
-        return { user: data.user, error: null };
+        return { 
+          user: { 
+            id: data.user.id, 
+            email: data.user.email 
+          }, 
+          error: null 
+        };
       }
 
       return { user: null, error: new Error('No user data returned') };
@@ -108,28 +65,31 @@ export class AuthService {
     }
   }
 
-  // Get JWT token from localStorage
-  getToken(): string | null {
-    return localStorage.getItem(SESSION_STORAGE_KEY);
+  // Get JWT token from Supabase session
+  async getToken(): Promise<string | null> {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token || null;
   }
 
   // Sign out
   async signOut(): Promise<{ error: Error | null }> {
     try {
-      localStorage.removeItem(USER_STORAGE_KEY);
-      localStorage.removeItem(SESSION_STORAGE_KEY);
-      return { error: null };
+      const { error } = await supabase.auth.signOut();
+      return { error: error };
     } catch (error) {
       return { error: error as Error };
     }
   }
 
-  // Get current user from localStorage
+  // Get current user from Supabase session
   async getCurrentUser(): Promise<AuthUser | null> {
     try {
-      const userJson = localStorage.getItem(USER_STORAGE_KEY);
-      if (userJson) {
-        return JSON.parse(userJson) as AuthUser;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        return { 
+          id: user.id, 
+          email: user.email 
+        };
       }
       return null;
     } catch (error) {
@@ -138,30 +98,27 @@ export class AuthService {
     }
   }
 
-  // Listen to auth state changes (simplified - checks localStorage)
+  // Listen to auth state changes
   onAuthStateChange(callback: (user: AuthUser | null) => void) {
-    // Check initial state
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        callback({ 
+          id: session.user.id, 
+          email: session.user.email 
+        });
+      } else {
+        callback(null);
+      }
+    });
+
+    // Also check initial state
     this.getCurrentUser().then(callback);
 
-    // Listen for storage changes (for multi-tab support)
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === USER_STORAGE_KEY) {
-        if (e.newValue) {
-          callback(JSON.parse(e.newValue) as AuthUser);
-        } else {
-          callback(null);
-        }
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-
-    // Return cleanup function
     return {
       data: {
         subscription: {
           unsubscribe: () => {
-            window.removeEventListener('storage', handleStorageChange);
+            subscription.unsubscribe();
           },
         },
       },

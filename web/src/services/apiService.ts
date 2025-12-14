@@ -9,12 +9,41 @@ export class ApiService {
 
   // Get current user ID from Supabase session
   private async getUserIdInternal(): Promise<string> {
-    // First check if we have a session
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) {
-      throw new Error('User not authenticated');
+    // Try getting the current session first (most reliable)
+    const { data: { session }, error } = await supabase.auth.getSession();
+    
+    if (session?.user) {
+      return session.user.id;
     }
-    return session.user.id;
+    
+    if (error) {
+      console.error('Error getting session:', error);
+    } else if (!session) {
+      console.warn('No session found, trying refresh...');
+      // Try to refresh the session
+      const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+      
+      if (refreshedSession?.user) {
+        return refreshedSession.user.id;
+      }
+      
+      if (refreshError) {
+        console.error('Error refreshing session:', refreshError);
+      }
+    }
+    
+    // Last resort: try getUser() which validates the token
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (user) {
+      return user.id;
+    }
+    
+    if (userError) {
+      console.error('Error getting user:', userError);
+    }
+    
+    throw new Error('User not authenticated');
   }
 
   // Helper to access serialization methods

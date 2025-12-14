@@ -18,13 +18,24 @@ export class AuthService {
         return { user: null, error: error };
       }
 
-      if (data.user) {
+      // Check if we have a session (user is immediately authenticated)
+      // If email confirmation is required, session will be null
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (data.user && session) {
+        // User is authenticated immediately
         return { 
           user: { 
             id: data.user.id, 
             email: data.user.email 
           }, 
           error: null 
+        };
+      } else if (data.user) {
+        // User created but needs email confirmation
+        return { 
+          user: null, 
+          error: new Error('Please check your email to confirm your account before signing in') 
         };
       }
 
@@ -83,11 +94,12 @@ export class AuthService {
   // Get current user from Supabase session
   async getCurrentUser(): Promise<AuthUser | null> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
+      // Use getSession() instead of getUser() - more reliable
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
         return { 
-          id: user.id, 
-          email: user.email 
+          id: session.user.id, 
+          email: session.user.email 
         };
       }
       return null;

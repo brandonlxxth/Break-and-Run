@@ -3,13 +3,16 @@ import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { theme } from './theme/theme';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import HomeScreen from './components/HomeScreen';
 import GameScreen from './components/GameScreen';
 import ScoreboardScreen from './components/ScoreboardScreen';
 import PastGamesScreen from './components/PastGamesScreen';
-import { gameRepository } from './services/GameRepository';
+import LoginScreen from './components/LoginScreen';
+import { unifiedGameRepository } from './services/UnifiedGameRepository';
 import { ActiveGame, Game, GameMode, BallColor } from './data/types';
 import { normalizeName } from './utils/nameUtils';
+import { Box, CircularProgress } from '@mui/material';
 
 // Store game data in sessionStorage temporarily for navigation
 const SESSION_STORAGE_KEY = 'breakandrun_newgame';
@@ -26,14 +29,38 @@ interface NewGameData {
 
 function AppRoutes() {
   const navigate = useNavigate();
+  const { user, loading } = useAuth();
   const [activeGame, setActiveGame] = useState<ActiveGame | null>(null);
   const [pastGames, setPastGames] = useState<Game[]>([]);
+  const [gamesLoading, setGamesLoading] = useState(true);
 
+  // Configure repository based on auth state
   useEffect(() => {
-    // Load active game and past games on mount
-    setActiveGame(gameRepository.getActiveGame());
-    setPastGames(gameRepository.getPastGames());
-  }, []);
+    unifiedGameRepository.setUseApi(!!user);
+  }, [user]);
+
+  // Load games when auth state changes
+  useEffect(() => {
+    const loadGames = async () => {
+      setGamesLoading(true);
+      try {
+        const [active, past] = await Promise.all([
+          unifiedGameRepository.getActiveGame(),
+          unifiedGameRepository.getPastGames(),
+        ]);
+        setActiveGame(active);
+        setPastGames(past);
+      } catch (error) {
+        console.error('Error loading games:', error);
+      } finally {
+        setGamesLoading(false);
+      }
+    };
+
+    if (!loading) {
+      loadGames();
+    }
+  }, [user, loading]);
 
   const handleCreateGame = (
     playerOne: string,
@@ -58,41 +85,51 @@ function AppRoutes() {
     navigate('/scoreboard');
   };
 
-  const handleActiveGameUpdate = (updatedGame: ActiveGame) => {
+  const handleActiveGameUpdate = async (updatedGame: ActiveGame) => {
     setActiveGame(updatedGame);
-    gameRepository.saveActiveGame(updatedGame);
+    await unifiedGameRepository.saveActiveGame(updatedGame);
   };
 
-  const handleGameEnd = (game: Game) => {
-    gameRepository.addGame(game);
+  const handleGameEnd = async (game: Game) => {
+    await unifiedGameRepository.addGame(game);
     setPastGames([...pastGames, game]);
     setActiveGame(null);
-    gameRepository.saveActiveGame(null);
+    await unifiedGameRepository.saveActiveGame(null);
     navigate('/');
   };
 
-  const handleBackFromScoreboard = (savedGame: ActiveGame | null) => {
+  const handleBackFromScoreboard = async (savedGame: ActiveGame | null) => {
     setActiveGame(savedGame);
-    if (savedGame) {
-      gameRepository.saveActiveGame(savedGame);
-    } else {
-      gameRepository.saveActiveGame(null);
-    }
+    await unifiedGameRepository.saveActiveGame(savedGame);
     navigate('/');
   };
 
-  const handleCancelActiveGame = () => {
+  const handleCancelActiveGame = async () => {
     setActiveGame(null);
-    gameRepository.saveActiveGame(null);
+    await unifiedGameRepository.saveActiveGame(null);
   };
+
+  // Show loading spinner while checking auth or loading games
+  if (loading || gamesLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Routes>
+      <Route
+        path="/login"
+        element={<LoginScreen />}
+      />
       <Route
         path="/"
         element={
           <HomeScreen
             activeGame={activeGame}
+            user={user}
             onNewGameClick={() => navigate('/new-game')}
             onResumeGameClick={() => {
               if (activeGame) {
@@ -103,6 +140,7 @@ function AppRoutes() {
             }}
             onPastGamesClick={() => navigate('/past-games')}
             onCancelActiveGame={handleCancelActiveGame}
+            onLoginClick={() => navigate('/login')}
           />
         }
       />
@@ -137,9 +175,10 @@ function AppRoutes() {
           <PastGamesScreen
             games={[...pastGames].sort((a, b) => b.date.getTime() - a.date.getTime())}
             onBackClick={() => navigate('/')}
-            onDeleteGame={(gameId) => {
-              gameRepository.deleteGame(gameId);
-              setPastGames(gameRepository.getPastGames());
+            onDeleteGame={async (gameId) => {
+              await unifiedGameRepository.deleteGame(gameId);
+              const updatedGames = await unifiedGameRepository.getPastGames();
+              setPastGames(updatedGames);
             }}
           />
         }
@@ -258,7 +297,9 @@ function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <BrowserRouter>
-        <AppRoutes />
+        <AuthProvider>
+          <AppRoutes />
+        </AuthProvider>
       </BrowserRouter>
     </ThemeProvider>
   );

@@ -13,6 +13,9 @@ export class AuthService {
   // Sign up with email and password (using Argon2 via Edge Function)
   async signUp(email: string, password: string): Promise<{ user: AuthUser | null; error: Error | null }> {
     try {
+      if (!supabaseConfig.supabaseUrl) {
+        return { user: null, error: new Error('Supabase URL not configured. Please set VITE_SUPABASE_URL environment variable.') };
+      }
       const response = await fetch(`${supabaseConfig.supabaseUrl}/functions/v1/auth-signup`, {
         method: 'POST',
         headers: {
@@ -22,10 +25,18 @@ export class AuthService {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await response.json();
+      // Handle empty responses (405, etc.)
+      const text = await response.text();
+      let data;
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch (e) {
+        console.error('Failed to parse response:', text);
+        return { user: null, error: new Error(`Server error: ${response.status} ${response.statusText}`) };
+      }
 
       if (!response.ok) {
-        return { user: null, error: new Error(data.error || 'Failed to sign up') };
+        return { user: null, error: new Error(data.error || data.message || `Failed to sign up: ${response.status} ${response.statusText}`) };
       }
 
       if (data.user && data.token) {
@@ -51,6 +62,9 @@ export class AuthService {
   // Sign in with email and password (using Argon2 via Edge Function)
   async signIn(email: string, password: string): Promise<{ user: AuthUser | null; error: Error | null }> {
     try {
+      if (!supabaseConfig.supabaseUrl) {
+        return { user: null, error: new Error('Supabase URL not configured. Please set VITE_SUPABASE_URL environment variable.') };
+      }
       const response = await fetch(`${supabaseConfig.supabaseUrl}/functions/v1/auth-signin`, {
         method: 'POST',
         headers: {
@@ -60,10 +74,18 @@ export class AuthService {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await response.json();
+      // Handle empty responses (405, etc.)
+      const text = await response.text();
+      let data;
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch (e) {
+        console.error('Failed to parse response:', text);
+        return { user: null, error: new Error(`Server error: ${response.status} ${response.statusText}`) };
+      }
 
       if (!response.ok) {
-        return { user: null, error: new Error(data.error || 'Failed to sign in') };
+        return { user: null, error: new Error(data.error || data.message || `Failed to sign in: ${response.status} ${response.statusText}`) };
       }
 
       if (data.user && data.token) {

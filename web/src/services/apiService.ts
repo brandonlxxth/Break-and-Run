@@ -1,19 +1,16 @@
-import { supabaseConfig } from './supabase';
+import { supabase } from './supabase';
 import { Game, ActiveGame, SerializableGame, SerializableActiveGame } from '../data/types';
 import { gameRepository } from './GameRepository';
-import { authService } from './authService';
 
 // This service handles API calls to Supabase
 // Uses GameRepository for serialization via composition
 export class ApiService {
   private userId: string | null = null;
   private repository = gameRepository;
-  private _loggedToken: string | null = null; // Track logged token to avoid duplicate logs from React StrictMode
 
   // Set user ID for API calls (called from auth context)
   setUserId(userId: string | null) {
     this.userId = userId;
-    this._loggedToken = null; // Reset when user changes
   }
 
   private getUserIdInternal(): string {
@@ -21,55 +18,6 @@ export class ApiService {
       throw new Error('User not authenticated');
     }
     return this.userId;
-  }
-
-  // Make direct REST API calls to PostgREST instead of using Supabase client
-  // This avoids issues with the client library interfering with custom JWTs
-  private async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const token = authService.getToken();
-    if (!token) {
-      throw new Error('No authentication token available');
-    }
-
-    // Debug: Log token once per unique request (avoid React StrictMode double logging)
-    if (import.meta.env.DEV && !this._loggedToken) {
-      this._loggedToken = token;
-      console.log('JWT Token (first 50 chars):', token.substring(0, 50) + '...');
-      // Decode JWT payload to verify structure (for debugging)
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        console.log('JWT Payload:', payload);
-        console.log('JWT Secret must match Legacy JWT Secret from Supabase Dashboard');
-      } catch (e) {
-        console.error('Failed to decode JWT payload:', e);
-      }
-    }
-
-    const url = `${supabaseConfig.supabaseUrl}/rest/v1${endpoint}`;
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': supabaseConfig.supabaseKey,
-        'Authorization': `Bearer ${token}`,
-        'Prefer': 'return=representation',
-        ...options.headers,
-      },
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: response.statusText }));
-      console.error('PostgREST Error:', error);
-      console.error('Response Status:', response.status);
-      console.error('Response Headers:', Object.fromEntries(response.headers.entries()));
-      throw error;
-    }
-
-    if (response.status === 204 || response.headers.get('content-length') === '0') {
-      return {} as T;
-    }
-
-    return response.json();
   }
 
   // Helper to access serialization methods
@@ -81,7 +29,15 @@ export class ApiService {
   // Get all past games for the current user
   async getPastGames(): Promise<Game[]> {
     try {
-      const data = await this.makeRequest<any[]>(`/games?select=*&order=date.desc`);
+      const { data, error } = await supabase
+        .from('games')
+        .select('*')
+        .order('date', { ascending: false });
+
+      if (error) {
+        console.error('Error in getPastGames:', error);
+        return [];
+      }
 
       if (!data || !Array.isArray(data)) return [];
 
@@ -140,10 +96,14 @@ export class ApiService {
         break_player: serializableGame.breakPlayer,
       };
       
-      await this.makeRequest('/games', {
-        method: 'POST',
-        body: JSON.stringify(dbGame),
-      });
+      const { error } = await supabase
+        .from('games')
+        .insert(dbGame);
+
+      if (error) {
+        console.error('Error in addGame:', error);
+        throw error;
+      }
     } catch (error) {
       console.error('Error in addGame:', error);
       throw error;
@@ -153,9 +113,15 @@ export class ApiService {
   // Delete a game
   async deleteGame(gameId: string): Promise<void> {
     try {
-      await this.makeRequest(`/games?id=eq.${gameId}`, {
-        method: 'DELETE',
-      });
+      const { error } = await supabase
+        .from('games')
+        .delete()
+        .eq('id', gameId);
+
+      if (error) {
+        console.error('Error in deleteGame:', error);
+        throw error;
+      }
     } catch (error) {
       console.error('Error in deleteGame:', error);
       throw error;
@@ -165,7 +131,15 @@ export class ApiService {
   // Get active game for the current user
   async getActiveGame(): Promise<ActiveGame | null> {
     try {
-      const data = await this.makeRequest<any[]>(`/active_games?select=*`);
+      const { data, error } = await supabase
+        .from('active_games')
+        .select('*')
+        .limit(1);
+
+      if (error) {
+        console.error('Error in getActiveGame:', error);
+        return null;
+      }
 
       if (!data || !Array.isArray(data) || data.length === 0) return null;
       
@@ -206,9 +180,15 @@ export class ApiService {
       
       if (activeGame === null) {
         // Delete active game
-        await this.makeRequest('/active_games', {
-          method: 'DELETE',
-        });
+        const { error } = await supabase
+          .from('active_games')
+          .delete()
+          .eq('user_id', userId);
+
+        if (error) {
+          console.error('Error deleting active game:', error);
+          throw error;
+        }
       } else {
         // Upsert active game
         const serializableActiveGame = this.serializeActiveGame(activeGame);
@@ -235,13 +215,14 @@ export class ApiService {
           player_two_color: serializableActiveGame.playerTwoColor,
         };
         
-        await this.makeRequest('/active_games', {
-          method: 'POST',
-          headers: {
-            'Prefer': 'resolution=merge-duplicates',
-          },
-          body: JSON.stringify(dbActiveGame),
-        });
+        const { error } = await supabase
+          .from('active_games')
+          .upsert(dbActiveGame, { onConflict: 'user_id' });
+
+        if (error) {
+          console.error('Error in saveActiveGame:', error);
+          throw error;
+        }
       }
     } catch (error) {
       console.error('Error in saveActiveGame:', error);

@@ -297,7 +297,8 @@ export default function PastGamesScreen({
                         const timeSincePrevious = frame.timestamp.getTime() - previousTime.getTime();
                         const secondsSincePrevious = timeSincePrevious / 1000.0;
 
-                        // Debug: Log frame data to help identify issues
+                        // Debug: Log frame data to help identify issues (only in development)
+                        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
                         if (import.meta.env.DEV && frame.dishType) {
                           console.log('Frame with dish:', { index, frame, dishType: frame.dishType });
                         }

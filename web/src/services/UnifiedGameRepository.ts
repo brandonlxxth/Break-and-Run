@@ -52,12 +52,18 @@ export class UnifiedGameRepository {
       try {
         await apiService.saveActiveGame(activeGame);
       } catch (error) {
-        // If API fails due to auth, fall back to localStorage
-        if (error instanceof Error && error.message.includes('not authenticated')) {
-          console.warn('User not authenticated, falling back to localStorage');
+        // If API fails due to auth or RLS, fall back to localStorage
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        if (errorMessage.includes('not authenticated') || 
+            errorMessage.includes('row-level security') ||
+            errorMessage.includes('42501') ||
+            errorMessage.includes('PGRST')) {
+          console.warn('[UnifiedGameRepository] API save failed, falling back to localStorage');
           gameRepository.saveActiveGame(activeGame);
         } else {
-          throw error;
+          // For other errors, still fall back but log it
+          console.warn('[UnifiedGameRepository] Unexpected error, falling back to localStorage:', error);
+          gameRepository.saveActiveGame(activeGame);
         }
       }
     } else {

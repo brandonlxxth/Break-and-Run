@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -13,9 +13,6 @@ import { unifiedGameRepository } from './services/UnifiedGameRepository';
 import { ActiveGame, Game, GameMode, BallColor } from './data/types';
 import { normalizeName } from './utils/nameUtils';
 import { Box, CircularProgress } from '@mui/material';
-
-// Store game data in sessionStorage temporarily for navigation
-const SESSION_STORAGE_KEY = 'breakandrun_newgame';
 
 interface NewGameData {
   playerOne: string;
@@ -33,6 +30,7 @@ function AppRoutes() {
   const [activeGame, setActiveGame] = useState<ActiveGame | null>(null);
   const [pastGames, setPastGames] = useState<Game[]>([]);
   const [gamesLoading, setGamesLoading] = useState(true);
+  const [newGameData, setNewGameData] = useState<NewGameData | null>(null);
 
   // Configure repository based on auth state
   useEffect(() => {
@@ -84,7 +82,7 @@ function AppRoutes() {
     p1Color: BallColor | null,
     p2Color: BallColor | null
   ) => {
-    // Store game data in sessionStorage temporarily
+    // Store game data in state - no sessionStorage needed
     const gameData: NewGameData = {
       playerOne,
       playerTwo,
@@ -94,20 +92,15 @@ function AppRoutes() {
       p1Color,
       p2Color,
     };
-    sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(gameData));
+    setNewGameData(gameData);
     navigate('/scoreboard');
   };
 
-  const handleActiveGameUpdate = async (updatedGame: ActiveGame) => {
+  const handleActiveGameUpdate = useCallback(async (updatedGame: ActiveGame) => {
+    // Update state and save to database - this is called when a frame is added
     setActiveGame(updatedGame);
-    try {
-      await unifiedGameRepository.saveActiveGame(updatedGame);
-    } catch (error) {
-      // Error is already handled in UnifiedGameRepository with fallback
-      // Just log it here for debugging
-      console.error('Error saving active game:', error);
-    }
-  };
+    await unifiedGameRepository.saveActiveGame(updatedGame);
+  }, []);
 
   const handleGameEnd = async (game: Game) => {
     await unifiedGameRepository.addGame(game);
@@ -152,8 +145,6 @@ function AppRoutes() {
             onNewGameClick={() => navigate('/new-game')}
             onResumeGameClick={() => {
               if (activeGame) {
-                // Store game ID in sessionStorage temporarily
-                sessionStorage.setItem('breakandrun_resume', activeGame.id);
                 navigate('/resume');
               }
             }}
@@ -174,7 +165,7 @@ function AppRoutes() {
       />
       <Route
         path="/scoreboard"
-        element={<ScoreboardRoute pastGames={pastGames} onActiveGameUpdate={handleActiveGameUpdate} onGameEnd={handleGameEnd} onBackClick={handleBackFromScoreboard} />}
+        element={<ScoreboardRoute newGameData={newGameData} pastGames={pastGames} onActiveGameUpdate={handleActiveGameUpdate} onGameEnd={handleGameEnd} onBackClick={handleBackFromScoreboard} onGameDataCleared={() => setNewGameData(null)} />}
       />
       <Route
         path="/resume"
@@ -207,36 +198,49 @@ function AppRoutes() {
 }
 
 function ScoreboardRoute({
+  newGameData,
   pastGames,
   onActiveGameUpdate,
   onGameEnd,
   onBackClick,
+  onGameDataCleared,
 }: {
+  newGameData: NewGameData | null;
   pastGames: Game[];
   onActiveGameUpdate: (game: ActiveGame) => void;
   onGameEnd: (game: Game) => void;
   onBackClick: (game: ActiveGame | null) => void;
+  onGameDataCleared: () => void;
 }) {
   const navigate = useNavigate();
+  // Store game data in ref so it persists after clearing from state
+  const gameDataRef = useRef<NewGameData | null>(null);
+  const hasClearedRef = useRef(false);
   
-  // Get game data from sessionStorage
-  const gameDataStr = sessionStorage.getItem(SESSION_STORAGE_KEY);
+  // Store game data in ref on mount, clear from parent state
+  useEffect(() => {
+    if (newGameData && !gameDataRef.current) {
+      gameDataRef.current = newGameData;
+      // Clear from parent state (only once)
+      if (!hasClearedRef.current) {
+        onGameDataCleared();
+        hasClearedRef.current = true;
+      }
+    }
+  }, [newGameData, onGameDataCleared]);
   
   useEffect(() => {
     // If no game data, redirect to home
-    if (!gameDataStr) {
+    if (!gameDataRef.current) {
       navigate('/');
-    } else {
-      // Clear sessionStorage after reading (only once on mount)
-      sessionStorage.removeItem(SESSION_STORAGE_KEY);
     }
-  }, [gameDataStr, navigate]);
+  }, [navigate]);
 
-  if (!gameDataStr) {
+  if (!gameDataRef.current) {
     return null; // Will redirect
   }
 
-  const gameData: NewGameData = JSON.parse(gameDataStr);
+  const gameData = gameDataRef.current;
 
   return (
     <ScoreboardScreen
@@ -271,28 +275,20 @@ function ResumeGameRoute({
 }) {
   const navigate = useNavigate();
   
-  // Get game ID from sessionStorage
-  const gameId = sessionStorage.getItem('breakandrun_resume');
-  
   useEffect(() => {
-    // If no game ID or game not found, redirect to home
-    if (!gameId || !activeGame || activeGame.id !== gameId) {
-      sessionStorage.removeItem('breakandrun_resume');
+    // If no active game, redirect to home
+    if (!activeGame) {
       navigate('/');
     }
-  }, [gameId, activeGame, navigate]);
+  }, [activeGame, navigate]);
 
-  // Clear sessionStorage after reading
-  useEffect(() => {
-    if (gameId) {
-      sessionStorage.removeItem('breakandrun_resume');
-    }
-  }, [gameId]);
-
-  if (!gameId || !activeGame || activeGame.id !== gameId) {
-    return null; // Will redirect
+  if (!activeGame) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
   }
-
   return (
     <ScoreboardScreen
       playerOneName={activeGame.playerOneName}

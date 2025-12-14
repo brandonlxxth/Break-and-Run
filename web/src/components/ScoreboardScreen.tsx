@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Card,
@@ -171,40 +171,71 @@ export default function ScoreboardScreen({
   const winConditions = calculateWinConditions();
   const { p1Won, p2Won, gameEnded, setEnded } = winConditions;
 
-  // Auto-save active game
+  // Track game ID to prevent regenerating it on every update
+  const gameIdRef = useRef<string | null>(activeGame?.id || null);
+  // Track if game has been submitted to prevent double submission
+  const hasSubmittedRef = useRef(false);
+  // Store callback in ref to avoid dependency issues
+  const onActiveGameUpdateRef = useRef(onActiveGameUpdate);
+  
+  // Update ref when callback changes
   useEffect(() => {
-    if (frameHistory.length > 0 || playerOneScore > 0 || playerTwoScore > 0) {
-      const activeGameState: ActiveGame = {
-        id: activeGame?.id || crypto.randomUUID(),
-        playerOneName: normalizedP1,
-        playerTwoName: normalizedP2,
-        playerOneScore,
-        playerTwoScore,
-        playerOneGamesWon,
-        playerTwoGamesWon,
-        targetScore,
-        gameMode,
-        startTime,
-        frameHistory,
-        playerOneSetsWon,
-        playerTwoSetsWon,
-        completedSets,
-        breakPlayer: currentBreakPlayer,
-        playerOneColor: initialP1Color,
-        playerTwoColor: initialP2Color,
-      };
-      onActiveGameUpdate(activeGameState);
+    onActiveGameUpdateRef.current = onActiveGameUpdate;
+  }, [onActiveGameUpdate]);
+  
+  // Initialize game ID from activeGame if available, otherwise generate one
+  useEffect(() => {
+    if (activeGame?.id) {
+      gameIdRef.current = activeGame.id;
+    } else if (!gameIdRef.current) {
+      gameIdRef.current = crypto.randomUUID();
     }
-  }, [
-    playerOneScore,
-    playerTwoScore,
-    playerOneGamesWon,
-    playerTwoGamesWon,
-    playerOneSetsWon,
-    playerTwoSetsWon,
-    frameHistory,
-    completedSets,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  
+  // Save active game when a frame is added (frameHistory changes)
+  // This is the only time we need to save - when game state actually changes
+  useEffect(() => {
+    // Don't save if game has been submitted
+    if (hasSubmittedRef.current) {
+      return;
+    }
+    
+    // Only save if there's at least one frame (game has started)
+    if (frameHistory.length === 0) {
+      return;
+    }
+    
+    // Ensure we have a game ID
+    if (!gameIdRef.current) {
+      gameIdRef.current = crypto.randomUUID();
+    }
+    
+    // Create active game state
+    const activeGameState: ActiveGame = {
+      id: gameIdRef.current,
+      playerOneName: normalizedP1,
+      playerTwoName: normalizedP2,
+      playerOneScore,
+      playerTwoScore,
+      playerOneGamesWon,
+      playerTwoGamesWon,
+      targetScore,
+      gameMode,
+      startTime,
+      frameHistory,
+      playerOneSetsWon,
+      playerTwoSetsWon,
+      completedSets,
+      breakPlayer: currentBreakPlayer,
+      playerOneColor: initialP1Color,
+      playerTwoColor: initialP2Color,
+    };
+    
+    // Save to database - this updates the existing record or creates a new one
+    onActiveGameUpdateRef.current(activeGameState);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [frameHistory.length]); // Only trigger when a frame is added
 
   // Handle new set button click for FIRST_TO mode
   const handleNewSet = () => {
@@ -275,10 +306,13 @@ export default function ScoreboardScreen({
       playerTwoScore: newP2Score,
       dishType,
     };
+    
     setFrameHistory([...frameHistory, newFrame]);
+    
     if (gameMode === GameMode.FIRST_TO) {
       setCurrentSetFrames([...currentSetFrames, newFrame]);
     }
+    
     // Switch break player
     setCurrentBreakPlayer(currentBreakPlayer === normalizedP1 ? normalizedP2 : normalizedP1);
   };
@@ -349,6 +383,13 @@ export default function ScoreboardScreen({
   };
 
   const handleEndGame = () => {
+    // Prevent double submission
+    if (hasSubmittedRef.current) {
+      console.warn('Game already submitted, ignoring duplicate submission');
+      return;
+    }
+    hasSubmittedRef.current = true;
+    
     // Check if score is 0-0 (no frames played)
     // For "Best of" mode, check games won; for "Sets of", check sets won; otherwise check scores
     let checkP1Score = playerOneScore;
@@ -452,7 +493,7 @@ export default function ScoreboardScreen({
       }
     }
     const game: Game = {
-      id: crypto.randomUUID(),
+      id: gameIdRef.current || crypto.randomUUID(), // Use the same ID as the active game
       playerOneName: normalizedP1,
       playerTwoName: normalizedP2,
       playerOneScore,
@@ -469,6 +510,7 @@ export default function ScoreboardScreen({
       sets: finalCompletedSets,
       breakPlayer: currentBreakPlayer,
     };
+    
     onGameEnd(game);
   };
 

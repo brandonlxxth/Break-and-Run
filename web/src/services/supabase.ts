@@ -12,5 +12,12 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 // Create Supabase client - this handles auth and database automatically
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Configure to persist session in localStorage
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true
+  }
+});
 

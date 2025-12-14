@@ -58,11 +58,9 @@ export class UnifiedGameRepository {
             errorMessage.includes('row-level security') ||
             errorMessage.includes('42501') ||
             errorMessage.includes('PGRST')) {
-          console.warn('[UnifiedGameRepository] API save failed, falling back to localStorage');
           gameRepository.saveActiveGame(activeGame);
         } else {
-          // For other errors, still fall back but log it
-          console.warn('[UnifiedGameRepository] Unexpected error, falling back to localStorage:', error);
+          // For other errors, still fall back to localStorage
           gameRepository.saveActiveGame(activeGame);
         }
       }

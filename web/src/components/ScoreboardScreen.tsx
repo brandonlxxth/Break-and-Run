@@ -385,7 +385,6 @@ export default function ScoreboardScreen({
   const handleEndGame = () => {
     // Prevent double submission
     if (hasSubmittedRef.current) {
-      console.warn('Game already submitted, ignoring duplicate submission');
       return;
     }
     hasSubmittedRef.current = true;

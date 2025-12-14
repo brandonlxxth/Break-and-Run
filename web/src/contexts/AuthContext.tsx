@@ -20,20 +20,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Check for existing session
     authService.getCurrentUser().then((currentUser) => {
       setUser(currentUser);
-      if (currentUser) {
-        apiService.setUserId(currentUser.id);
-      }
       setLoading(false);
     });
 
     // Listen for auth state changes
     const { data: { subscription } } = authService.onAuthStateChange((newUser) => {
       setUser(newUser);
-      if (newUser) {
-        apiService.setUserId(newUser.id);
-      } else {
-        apiService.setUserId(null);
-      }
       setLoading(false);
     });
 
@@ -46,7 +38,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { user: newUser, error } = await authService.signUp(email, password);
     if (newUser && !error) {
       setUser(newUser);
-      apiService.setUserId(newUser.id);
     }
     return { error };
   };
@@ -55,7 +46,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { user: signedInUser, error } = await authService.signIn(email, password);
     if (signedInUser && !error) {
       setUser(signedInUser);
-      apiService.setUserId(signedInUser.id);
     }
     return { error };
   };
@@ -63,7 +53,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     await authService.signOut();
     setUser(null);
-    apiService.setUserId(null);
   };
 
   return (

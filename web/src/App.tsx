@@ -87,7 +87,13 @@ function AppRoutes() {
 
   const handleActiveGameUpdate = async (updatedGame: ActiveGame) => {
     setActiveGame(updatedGame);
-    await unifiedGameRepository.saveActiveGame(updatedGame);
+    try {
+      await unifiedGameRepository.saveActiveGame(updatedGame);
+    } catch (error) {
+      // Error is already handled in UnifiedGameRepository with fallback
+      // Just log it here for debugging
+      console.error('Error saving active game:', error);
+    }
   };
 
   const handleGameEnd = async (game: Game) => {

@@ -17,9 +17,8 @@ export class ApiService {
     }
     
     if (error) {
-      console.error('Error getting session:', error);
+      console.error('[ApiService] Error getting session:', error);
     } else if (!session) {
-      console.warn('No session found, trying refresh...');
       // Try to refresh the session
       const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
       
@@ -28,7 +27,7 @@ export class ApiService {
       }
       
       if (refreshError) {
-        console.error('Error refreshing session:', refreshError);
+        console.error('[ApiService] Error refreshing session:', refreshError);
       }
     }
     
@@ -40,7 +39,7 @@ export class ApiService {
     }
     
     if (userError) {
-      console.error('Error getting user:', userError);
+      console.error('[ApiService] Error getting user:', userError);
     }
     
     throw new Error('User not authenticated');
@@ -203,17 +202,20 @@ export class ApiService {
   async saveActiveGame(activeGame: ActiveGame | null): Promise<void> {
     try {
       if (activeGame === null) {
-        // Delete active game - RLS will automatically filter by auth.uid()
+        // Delete active game - need WHERE clause for PostgREST
+        // RLS will automatically filter by auth.uid()
+        const userId = await this.getUserIdInternal();
         const { error } = await supabase
           .from('active_games')
-          .delete();
+          .delete()
+          .eq('user_id', userId);
 
         if (error) {
-          console.error('Error deleting active game:', error);
+          console.error('[ApiService] Error deleting active game:', error);
           throw error;
         }
       } else {
-        // Upsert active game
+        // Upsert active game - updates existing record or creates new one
         const userId = await this.getUserIdInternal();
         const serializableActiveGame = this.serializeActiveGame(activeGame);
         
@@ -244,12 +246,14 @@ export class ApiService {
           .upsert(dbActiveGame, { onConflict: 'user_id' });
 
         if (error) {
-          console.error('Error in saveActiveGame:', error);
-          throw error;
+          console.error('[ApiService] Error saving active game:', error);
+          const errorMessage = error.message || String(error);
+          const errorCode = (error as any).code || '';
+          throw new Error(`${errorMessage} (code: ${errorCode})`);
         }
       }
     } catch (error) {
-      console.error('Error in saveActiveGame:', error);
+      console.error('[ApiService] Error in saveActiveGame:', error);
       throw error;
     }
   }

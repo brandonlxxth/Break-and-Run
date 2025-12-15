@@ -281,15 +281,20 @@ export default function ScoreboardScreen({
   }, []);
   
   // Save active game when a frame is added (frameHistory changes)
-  // This is the only time we need to save - when game state actually changes
   useEffect(() => {
     // Don't save if game has been submitted
     if (hasSubmittedRef.current) {
       return;
     }
     
-    // Only save if there's at least one frame (game has started)
-    if (frameHistory.length === 0) {
+    // For non-killer modes, only save if there's at least one frame (game has started)
+    // For killer mode, save even if no frames yet (to save initial player list)
+    if (gameMode !== GameMode.KILLER && frameHistory.length === 0) {
+      return;
+    }
+    
+    // For killer mode, ensure we have players before saving
+    if (gameMode === GameMode.KILLER && (!killerPlayersState || killerPlayersState.length === 0)) {
       return;
     }
     
@@ -324,7 +329,57 @@ export default function ScoreboardScreen({
     // Save to database - this updates the existing record or creates a new one
     onActiveGameUpdateRef.current(activeGameState);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [frameHistory.length]); // Only trigger when a frame is added
+  }, [frameHistory.length]); // Trigger when frame is added
+
+  // For killer mode, also save when killerPlayersState changes (e.g., when lives change)
+  useEffect(() => {
+    // Only for killer mode
+    if (gameMode !== GameMode.KILLER) {
+      return;
+    }
+    
+    // Don't save if game has been submitted
+    if (hasSubmittedRef.current) {
+      return;
+    }
+    
+    // Ensure we have players
+    if (!killerPlayersState || killerPlayersState.length === 0) {
+      return;
+    }
+    
+    // Ensure we have a game ID
+    if (!gameIdRef.current) {
+      gameIdRef.current = crypto.randomUUID();
+    }
+    
+    // Create active game state
+    const activeGameState: ActiveGame = {
+      id: gameIdRef.current,
+      playerOneName: '',
+      playerTwoName: '',
+      playerOneScore,
+      playerTwoScore,
+      playerOneGamesWon,
+      playerTwoGamesWon,
+      targetScore,
+      gameMode,
+      startTime,
+      frameHistory,
+      playerOneSetsWon,
+      playerTwoSetsWon,
+      completedSets,
+      breakPlayer: currentBreakPlayer,
+      playerOneColor: initialP1Color,
+      playerTwoColor: initialP2Color,
+      killerOptions: killerOptions,
+      killerPlayers: killerPlayersState, // Save current player state with lives
+    };
+    
+    // Save to database - this updates the existing record or creates a new one
+    onActiveGameUpdateRef.current(activeGameState);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameMode, killerPlayersState]); // Trigger when killerPlayersState changes
 
   // Handle new set button click for FIRST_TO mode
   const handleNewSet = () => {

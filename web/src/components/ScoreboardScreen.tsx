@@ -658,7 +658,15 @@ export default function ScoreboardScreen({
     let winner: string | null = null;
     if (gameMode === GameMode.KILLER) {
       const killerWinner = (winConditions as any).killerWinner;
-      winner = killerWinner ? killerWinner.id : null; // Store player ID instead of normalizedName
+      // For killer mode, store the winner's name directly for accurate display
+      // Ensure we have a valid name, not an ID
+      if (killerWinner && killerWinner.name) {
+        // killerWinner is a KillerPlayer object with { id, name, normalizedName, lives }
+        // Store the name, not the ID
+        winner = killerWinner.name;
+      } else {
+        winner = null;
+      }
     } else if (gameEnded) {
       // Game reached target score - winner already determined
       winner = p1Won ? normalizedP1 : p2Won ? normalizedP2 : null;

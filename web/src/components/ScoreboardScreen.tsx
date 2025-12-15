@@ -703,6 +703,30 @@ export default function ScoreboardScreen({
         }
       }
     }
+    // For killer mode, ensure we capture the final state of all players with their current lives
+    // Use the current killerPlayersState which should have all players with their final lives
+    let finalKillerPlayers: KillerPlayer[] | undefined = undefined;
+    if (gameMode === GameMode.KILLER) {
+      // Ensure we have player data - use current state or fallback to initial
+      if (killerPlayersState && killerPlayersState.length > 0) {
+        // Create a deep copy to ensure we capture the final state
+        finalKillerPlayers = killerPlayersState.map(p => ({
+          id: p.id,
+          name: p.name,
+          normalizedName: p.normalizedName,
+          lives: p.lives
+        }));
+      } else if (initialKillerPlayers && initialKillerPlayers.length > 0) {
+        // Fallback to initial players if state is empty (shouldn't happen, but safety check)
+        finalKillerPlayers = initialKillerPlayers.map(p => ({
+          id: p.id,
+          name: p.name,
+          normalizedName: p.normalizedName,
+          lives: p.lives
+        }));
+      }
+    }
+    
     const game: Game = {
       id: gameIdRef.current || crypto.randomUUID(), // Use the same ID as the active game
       playerOneName: gameMode === GameMode.KILLER ? '' : normalizedP1,
@@ -721,7 +745,7 @@ export default function ScoreboardScreen({
       sets: finalCompletedSets,
       breakPlayer: currentBreakPlayer,
       killerOptions: gameMode === GameMode.KILLER ? killerOptions : undefined,
-      killerPlayers: gameMode === GameMode.KILLER ? killerPlayersState : undefined,
+      killerPlayers: finalKillerPlayers, // Store final player state with lives
     };
     
     onGameEnd(game);

@@ -96,6 +96,8 @@ export default function PastGamesScreen({
       <Box sx={{ p: { xs: 1.5, sm: 2 }, maxWidth: 800, mx: 'auto' }}>
         {games.map((game) => {
           const isExpanded = expandedGameId === game.id;
+          // Ensure killerPlayers is available for killer mode games
+          const killerPlayers = game.gameMode === GameMode.KILLER ? (game.killerPlayers || []) : [];
           const duration = game.endTime.getTime() - game.startTime.getTime();
           const durationSeconds = Math.floor(duration / 1000);
           const durationMinutes = Math.floor(durationSeconds / 60);
@@ -155,9 +157,20 @@ export default function PastGamesScreen({
                       {game.gameMode === GameMode.KILLER ? (
                         <>
                           <Typography variant="h6" fontWeight="bold" sx={{ color: 'white', fontSize: { xs: '1.125rem', sm: '1.25rem' } }}>
-                            {game.winner && game.killerPlayers 
-                              ? formatNameForDisplay(game.killerPlayers.find(p => p.id === game.winner)?.name || game.winner)
-                              : 'No Winner'}
+                            {(() => {
+                              // If winner looks like a GUID (contains hyphens and is long), try to find the player
+                              if (game.winner && game.winner.length > 30 && game.winner.includes('-')) {
+                                // This might be an old game with ID stored - try to find by ID
+                                const winnerById = killerPlayers.find(p => p && p.id === game.winner);
+                                if (winnerById && winnerById.name) {
+                                  return formatNameForDisplay(winnerById.name);
+                                }
+                              }
+                              // Otherwise, treat it as a name
+                              return game.winner
+                                ? formatNameForDisplay(game.winner)
+                                : 'No Winner';
+                            })()}
                           </Typography>
                           <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
                             Winner
@@ -326,14 +339,15 @@ export default function PastGamesScreen({
                   ) : game.gameMode === GameMode.KILLER ? (
                     <Box>
                       {/* Show final player standings */}
-                      {game.killerPlayers && game.killerPlayers.length > 0 && (
+                      {killerPlayers && killerPlayers.length > 0 && (
                         <Box sx={{ mb: 3 }}>
                           <Typography variant="subtitle2" fontWeight="bold" gutterBottom sx={{ color: 'text.primary', fontSize: { xs: '0.9rem', sm: '1rem' } }}>
                             Final Standings
                           </Typography>
                           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                            {game.killerPlayers.map((player, idx) => {
-                              const isWinner = game.winner === player.id; // Compare by ID instead of normalizedName
+                            {killerPlayers.map((player, idx) => {
+                              // For killer mode, winner is stored as player name, so compare by name
+                              const isWinner = game.winner === player.name;
                               // Only show as eliminated if NOT the winner and has 0 lives
                               const isEliminated = !isWinner && player.lives === 0;
                               return (

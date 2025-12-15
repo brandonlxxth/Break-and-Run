@@ -14,7 +14,7 @@ import {
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import StarIcon from '@mui/icons-material/Star';
-import { ActiveGame, Game, GameMode, GameModeDisplayNames, DishType, BallColor, Frame } from '../data/types';
+import { ActiveGame, Game, GameMode, GameModeDisplayNames, DishType, BallColor, Frame, KillerPlayer } from '../data/types';
 import { normalizeName, formatNameForDisplay } from '../utils/nameUtils';
 
 interface ScoreboardScreenProps {
@@ -30,6 +30,8 @@ interface ScoreboardScreenProps {
   onBackClick: (savedActiveGame: ActiveGame | null) => void;
   onGameEnd: (game: Game) => void;
   onActiveGameUpdate: (activeGame: ActiveGame) => void;
+  killerOptions?: { trickshotBlackEnabled: boolean };
+  killerPlayers?: KillerPlayer[];
 }
 
 export default function ScoreboardScreen({
@@ -45,6 +47,8 @@ export default function ScoreboardScreen({
   onBackClick,
   onGameEnd,
   onActiveGameUpdate,
+  killerOptions,
+  killerPlayers: initialKillerPlayers,
 }: ScoreboardScreenProps) {
   const normalizedP1 = normalizeName(playerOneName);
   const normalizedP2 = normalizeName(playerTwoName);
@@ -123,6 +127,53 @@ export default function ScoreboardScreen({
   const [currentBreakPlayer, setCurrentBreakPlayer] = useState<string | null>(
     activeGame?.breakPlayer || initialBreakPlayer || normalizedP1
   );
+  
+  // Killer mode state - initialize from activeGame or initialKillerPlayers
+  const [killerPlayersState, setKillerPlayersState] = useState<KillerPlayer[]>(() => {
+    if (gameMode === GameMode.KILLER) {
+      // When resuming, activeGame should have killerPlayers
+      if (activeGame?.killerPlayers && Array.isArray(activeGame.killerPlayers) && activeGame.killerPlayers.length > 0) {
+        return activeGame.killerPlayers;
+      } 
+      // When creating new game, initialKillerPlayers is passed
+      if (initialKillerPlayers && Array.isArray(initialKillerPlayers) && initialKillerPlayers.length > 0) {
+        return initialKillerPlayers;
+      }
+    }
+    return [];
+  });
+  
+  // Update killer players when props change (especially when resuming)
+  useEffect(() => {
+    if (gameMode === GameMode.KILLER) {
+      // Priority: activeGame > initialKillerPlayers
+      // Check if activeGame has killerPlayers (for resume)
+      if (activeGame?.killerPlayers && Array.isArray(activeGame.killerPlayers) && activeGame.killerPlayers.length > 0) {
+        setKillerPlayersState(activeGame.killerPlayers);
+        return;
+      }
+      // Check if initialKillerPlayers is provided (for new game)
+      if (initialKillerPlayers && Array.isArray(initialKillerPlayers) && initialKillerPlayers.length > 0) {
+        setKillerPlayersState(initialKillerPlayers);
+        return;
+      }
+      // If we have an activeGame but no killerPlayers, something is wrong - keep current state
+      if (activeGame && (!activeGame.killerPlayers || activeGame.killerPlayers.length === 0)) {
+        // Don't clear if we already have players loaded (might be a timing issue)
+        if (killerPlayersState.length > 0) {
+          return;
+        }
+      }
+      // Only clear if we're sure there's no data and we don't have an activeGame loading
+      if (!activeGame && !initialKillerPlayers) {
+        setKillerPlayersState([]);
+      }
+    } else {
+      // Clear killer players when not in killer mode
+      setKillerPlayersState([]);
+    }
+  }, [gameMode, activeGame, activeGame?.killerPlayers, initialKillerPlayers]);
+  
   const [playerOneScore, setPlayerOneScore] = useState(activeGame?.playerOneScore || 0);
   const [playerTwoScore, setPlayerTwoScore] = useState(activeGame?.playerTwoScore || 0);
   const [playerOneGamesWon, setPlayerOneGamesWon] = useState(activeGame?.playerOneGamesWon || 0);
@@ -134,6 +185,31 @@ export default function ScoreboardScreen({
   const [completedSets, setCompletedSets] = useState(activeGame?.completedSets || []);
   const [currentGameEnded, setCurrentGameEnded] = useState(false);
   const [showEndGameDialog, setShowEndGameDialog] = useState(false);
+  const [lastSelectedPlayer, setLastSelectedPlayer] = useState<KillerPlayer | null>(null);
+  const [isSelecting, setIsSelecting] = useState(false);
+  const [buttonPressed, setButtonPressed] = useState<string | null>(null);
+  
+  // Initialize with a random player selected for killer mode (only if no player is already selected)
+  useEffect(() => {
+    if (gameMode === GameMode.KILLER && killerPlayersState.length > 0 && !lastSelectedPlayer) {
+      const available = killerPlayersState.filter(p => p.lives > 0);
+      if (available.length > 0) {
+        // If resuming from activeGame, try to find the last player from frame history
+        // Note: frames store normalizedName, so we match by that for backward compatibility
+        if (activeGame && activeGame.frameHistory && activeGame.frameHistory.length > 0) {
+          const lastFrame = activeGame.frameHistory[activeGame.frameHistory.length - 1];
+          const lastPlayer = killerPlayersState.find(p => p.normalizedName === lastFrame.player);
+          if (lastPlayer && lastPlayer.lives > 0) {
+            setLastSelectedPlayer(lastPlayer);
+            return;
+          }
+        }
+        // Otherwise, select a random available player
+        const randomIndex = Math.floor(Math.random() * available.length);
+        setLastSelectedPlayer(available[randomIndex]);
+      }
+    }
+  }, [gameMode, killerPlayersState, activeGame, lastSelectedPlayer]);
 
   // Calculate win conditions
   const calculateWinConditions = () => {
@@ -165,11 +241,22 @@ export default function ScoreboardScreen({
         };
       case GameMode.FREE_PLAY:
         return { p1Won: false, p2Won: false, gameEnded: false, setEnded: false };
+      case GameMode.KILLER:
+        const availablePlayers = killerPlayersState.filter(p => p.lives > 0);
+        const gameEnded = availablePlayers.length === 1;
+        const winner = gameEnded ? availablePlayers[0] : null;
+        return {
+          p1Won: winner !== null && winner.normalizedName === normalizedP1,
+          p2Won: winner !== null && winner.normalizedName === normalizedP2,
+          gameEnded,
+          setEnded: false,
+          killerWinner: winner,
+        };
     }
   };
 
   const winConditions = calculateWinConditions();
-  const { p1Won, p2Won, gameEnded, setEnded } = winConditions;
+  const { p1Won, p2Won, gameEnded, setEnded } = winConditions as any;
 
   // Track game ID to prevent regenerating it on every update
   const gameIdRef = useRef<string | null>(activeGame?.id || null);
@@ -214,8 +301,8 @@ export default function ScoreboardScreen({
     // Create active game state
     const activeGameState: ActiveGame = {
       id: gameIdRef.current,
-      playerOneName: normalizedP1,
-      playerTwoName: normalizedP2,
+      playerOneName: gameMode === GameMode.KILLER ? '' : normalizedP1,
+      playerTwoName: gameMode === GameMode.KILLER ? '' : normalizedP2,
       playerOneScore,
       playerTwoScore,
       playerOneGamesWon,
@@ -230,6 +317,8 @@ export default function ScoreboardScreen({
       breakPlayer: currentBreakPlayer,
       playerOneColor: initialP1Color,
       playerTwoColor: initialP2Color,
+      killerOptions: gameMode === GameMode.KILLER ? killerOptions : undefined,
+      killerPlayers: gameMode === GameMode.KILLER ? killerPlayersState : undefined,
     };
     
     // Save to database - this updates the existing record or creates a new one
@@ -313,8 +402,120 @@ export default function ScoreboardScreen({
       setCurrentSetFrames([...currentSetFrames, newFrame]);
     }
     
-    // Switch break player
-    setCurrentBreakPlayer(currentBreakPlayer === normalizedP1 ? normalizedP2 : normalizedP1);
+    // Switch break player (only for non-killer modes)
+    if (gameMode !== GameMode.KILLER) {
+      setCurrentBreakPlayer(currentBreakPlayer === normalizedP1 ? normalizedP2 : normalizedP1);
+    }
+  };
+  
+  // Killer mode: Get random available player with animation
+  const selectRandomPlayer = (availablePlayers: KillerPlayer[], onSelect: (player: KillerPlayer, updatedPlayers: KillerPlayer[]) => void) => {
+    if (availablePlayers.length === 0) return;
+    
+    setIsSelecting(true);
+    
+    // Animate through players smoothly before selecting
+    let iteration = 0;
+    const maxIterations = 12;
+    let previousIndex = -1;
+    const interval = setInterval(() => {
+      // Ensure we don't select the same player twice in a row
+      let randomIndex;
+      do {
+        randomIndex = Math.floor(Math.random() * availablePlayers.length);
+      } while (randomIndex === previousIndex && availablePlayers.length > 1);
+      
+      previousIndex = randomIndex;
+      setLastSelectedPlayer(availablePlayers[randomIndex]);
+      iteration++;
+      
+      if (iteration >= maxIterations) {
+        clearInterval(interval);
+        // Final selection
+        const finalIndex = Math.floor(Math.random() * availablePlayers.length);
+        const selectedPlayer = availablePlayers[finalIndex];
+        setLastSelectedPlayer(selectedPlayer);
+        setIsSelecting(false);
+        
+        // Pass current state to callback
+        onSelect(selectedPlayer, killerPlayersState);
+      }
+    }, 150); // Slower animation (150ms instead of 100ms)
+  };
+  
+  // Killer mode: Handle ball potted
+  const handleBallPotted = () => {
+    if (gameEnded) return;
+    setButtonPressed('potted');
+    setTimeout(() => setButtonPressed(null), 300);
+    
+    // Get available players first
+    const available = killerPlayersState.filter(p => p.lives > 0);
+    if (available.length === 0) return;
+    
+    // Select random player with animation
+    selectRandomPlayer(available, (selectedPlayer) => {
+      // Just record the pot, no life change
+      addFrame(selectedPlayer.normalizedName, 0, playerOneScore, playerTwoScore);
+    });
+  };
+  
+  // Killer mode: Handle ball missed
+  const handleBallMissed = () => {
+    if (gameEnded) return;
+    setButtonPressed('missed');
+    setTimeout(() => setButtonPressed(null), 300);
+    
+    // Reduce lives from CURRENT player BEFORE animation
+    if (!lastSelectedPlayer) return;
+    
+    const updatedPlayers = killerPlayersState.map(p => 
+      p.id === lastSelectedPlayer.id
+        ? { ...p, lives: Math.max(0, p.lives - 1) }
+        : p
+    );
+    setKillerPlayersState(updatedPlayers);
+    
+    // Get available players (after reducing lives) for next selection
+    const available = updatedPlayers.filter(p => p.lives > 0);
+    if (available.length === 0) return;
+    
+    // Select random player with animation (lives already reduced from previous player)
+    selectRandomPlayer(available, (selectedPlayer) => {
+      // Get final player scores for frame (using first two players for compatibility)
+      const p1Score = updatedPlayers[0]?.lives || 0;
+      const p2Score = updatedPlayers[1]?.lives || 0;
+      addFrame(selectedPlayer.normalizedName, -1, p1Score, p2Score, DishType.MISS);
+    });
+  };
+  
+  // Killer mode: Handle trickshot black
+  const handleTrickshotBlack = () => {
+    if (gameEnded || isSelecting || !killerOptions?.trickshotBlackEnabled) return;
+    setButtonPressed('trickshot');
+    setTimeout(() => setButtonPressed(null), 300);
+    
+    // Increment lives from CURRENT player BEFORE animation
+    if (!lastSelectedPlayer) return;
+    
+    const updatedPlayers = killerPlayersState.map(p => 
+      p.id === lastSelectedPlayer.id
+        ? { ...p, lives: p.lives + 1 }
+        : p
+    );
+    setKillerPlayersState(updatedPlayers);
+    
+    // Get available players for next selection
+    const available = updatedPlayers.filter(p => p.lives > 0);
+    if (available.length === 0) return;
+    
+    // Select random player with animation (lives already incremented from previous player)
+    selectRandomPlayer(available, (selectedPlayer) => {
+      // Get final player scores for frame (using first two players for compatibility)
+      const p1Score = updatedPlayers[0]?.lives || 0;
+      const p2Score = updatedPlayers[1]?.lives || 0;
+      addFrame(selectedPlayer.normalizedName, 1, p1Score, p2Score, DishType.TRICKSHOT_BLACK);
+    });
   };
 
   const handleIncrement = (player: 'p1' | 'p2') => {
@@ -455,7 +656,10 @@ export default function ScoreboardScreen({
     
     // Determine winner
     let winner: string | null = null;
-    if (gameEnded) {
+    if (gameMode === GameMode.KILLER) {
+      const killerWinner = (winConditions as any).killerWinner;
+      winner = killerWinner ? killerWinner.id : null; // Store player ID instead of normalizedName
+    } else if (gameEnded) {
       // Game reached target score - winner already determined
       winner = p1Won ? normalizedP1 : p2Won ? normalizedP2 : null;
     } else {
@@ -493,8 +697,8 @@ export default function ScoreboardScreen({
     }
     const game: Game = {
       id: gameIdRef.current || crypto.randomUUID(), // Use the same ID as the active game
-      playerOneName: normalizedP1,
-      playerTwoName: normalizedP2,
+      playerOneName: gameMode === GameMode.KILLER ? '' : normalizedP1,
+      playerTwoName: gameMode === GameMode.KILLER ? '' : normalizedP2,
       playerOneScore,
       playerTwoScore,
       targetScore,
@@ -508,6 +712,8 @@ export default function ScoreboardScreen({
       playerTwoSetsWon: finalPlayerTwoSetsWon,
       sets: finalCompletedSets,
       breakPlayer: currentBreakPlayer,
+      killerOptions: gameMode === GameMode.KILLER ? killerOptions : undefined,
+      killerPlayers: gameMode === GameMode.KILLER ? killerPlayersState : undefined,
     };
     
     onGameEnd(game);
@@ -839,8 +1045,8 @@ export default function ScoreboardScreen({
           onClick={() => {
             const savedGame: ActiveGame = {
               id: activeGame?.id || crypto.randomUUID(),
-              playerOneName: normalizedP1,
-              playerTwoName: normalizedP2,
+              playerOneName: gameMode === GameMode.KILLER ? '' : normalizedP1,
+              playerTwoName: gameMode === GameMode.KILLER ? '' : normalizedP2,
               playerOneScore,
               playerTwoScore,
               playerOneGamesWon,
@@ -855,6 +1061,8 @@ export default function ScoreboardScreen({
               breakPlayer: currentBreakPlayer,
               playerOneColor: initialP1Color,
               playerTwoColor: initialP2Color,
+              killerOptions: gameMode === GameMode.KILLER ? killerOptions : undefined,
+              killerPlayers: gameMode === GameMode.KILLER ? killerPlayersState : undefined,
             };
             onBackClick(savedGame);
           }}
@@ -870,7 +1078,7 @@ export default function ScoreboardScreen({
               fontSize: '0.9rem',
             }
           }}>
-            {gameMode === GameMode.FREE_PLAY
+            {gameMode === GameMode.FREE_PLAY || gameMode === GameMode.KILLER
               ? GameModeDisplayNames[gameMode]
               : `${GameModeDisplayNames[gameMode]} ${targetScore}`}
           </Typography>
@@ -1193,37 +1401,220 @@ export default function ScoreboardScreen({
         </Box>
       )}
 
-      <Box sx={{ 
-        p: { xs: 1.5, sm: 2 }, 
-        display: 'flex', 
-        gap: { xs: 2, sm: 3, md: 4 },
-        flexDirection: { xs: 'column', sm: 'row' },
-        flex: 1,
-        minHeight: 0,
-        overflow: 'auto',
-        '@media (orientation: landscape) and (max-width: 900px)': {
-          flexDirection: 'row',
-          gap: 2,
-          p: 1.5,
-        }
-      }}>
-        <PlayerCard
-          playerName={normalizedP1}
-          displayName={displayP1}
-          score={playerOneScore}
-          isPlayerOne={true}
-          gamesWon={playerOneGamesWon}
-          setsWon={playerOneSetsWon}
-        />
-        <PlayerCard
-          playerName={normalizedP2}
-          displayName={displayP2}
-          score={playerTwoScore}
-          isPlayerOne={false}
-          gamesWon={playerTwoGamesWon}
-          setsWon={playerTwoSetsWon}
-        />
-      </Box>
+      {gameMode === GameMode.KILLER ? (
+        // Killer Mode UI - Single Card Layout
+        <Box sx={{ 
+          p: { xs: 1.5, sm: 2 }, 
+          display: 'flex', 
+          flexDirection: 'column',
+          alignItems: 'center',
+          flex: 1,
+          minHeight: 0,
+          overflow: 'auto',
+        }}>
+          <Card sx={{ 
+            width: '100%', 
+            maxWidth: 600,
+            mb: 2
+          }}>
+            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+              <Typography variant="h5" fontWeight="bold" sx={{ mb: 2, textAlign: 'center' }}>
+                Players
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mb: 3, px: 0.5, py: 0.5 }}>
+                {killerPlayersState.length === 0 ? (
+                  <Typography variant="body2" sx={{ textAlign: 'center', color: 'text.secondary', py: 2 }}>
+                    No players loaded
+                  </Typography>
+                ) : (
+                  killerPlayersState.map((player) => {
+                  const isEliminated = player.lives === 0;
+                  const isWinner = gameEnded && (winConditions as any).killerWinner?.id === player.id;
+                  const isLastSelected = lastSelectedPlayer?.id === player.id && !gameEnded;
+                  return (
+                    <Box
+                      key={player.id}
+                      sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        p: 1.5,
+                        borderRadius: 2,
+                        bgcolor: isEliminated ? 'error.light' : isWinner ? 'success.light' : isLastSelected ? 'primary.main' : 'background.paper',
+                        // Always use 3px border to reserve space - transparent when not selected
+                        border: '3px solid',
+                        borderColor: isWinner ? 'success.main' : isLastSelected ? 'primary.dark' : 'transparent',
+                        opacity: isEliminated ? 0.6 : 1,
+                        transition: isSelecting && isLastSelected ? 'all 0.15s ease-in-out' : 'all 0.3s ease',
+                        // Remove scale transform to prevent layout shift - use box-shadow for emphasis instead
+                        transform: 'none',
+                        // Always reserve space for maximum shadow - use transparent when not active
+                        // Max shadow spread is 32px, so we need padding/margin to account for it
+                        boxShadow: isWinner 
+                          ? '0 8px 24px rgba(46, 125, 50, 0.6), 0 4px 12px rgba(46, 125, 50, 0.4)' 
+                          : isLastSelected 
+                            ? (isSelecting ? '0 6px 20px rgba(25, 118, 210, 0.6)' : '0 4px 12px rgba(25, 118, 210, 0.4)') 
+                            : '0 0 0 transparent',
+                        animation: isWinner 
+                          ? 'winnerGlow 2s ease-in-out infinite' 
+                          : isSelecting && isLastSelected 
+                            ? 'pulse 0.15s ease-in-out' 
+                            : 'none',
+                        '@keyframes winnerGlow': {
+                          '0%, 100%': {
+                            boxShadow: '0 8px 24px rgba(46, 125, 50, 0.6), 0 4px 12px rgba(46, 125, 50, 0.4)',
+                          },
+                          '50%': {
+                            boxShadow: '0 12px 32px rgba(46, 125, 50, 0.8), 0 6px 16px rgba(46, 125, 50, 0.6)',
+                          },
+                        },
+                        '@keyframes pulse': {
+                          '0%, 100%': {
+                            boxShadow: '0 4px 12px rgba(25, 118, 210, 0.4)',
+                          },
+                          '50%': {
+                            boxShadow: '0 6px 20px rgba(25, 118, 210, 0.6)',
+                          },
+                        },
+                      }}
+                    >
+                      <Typography variant="h6" sx={{ fontWeight: 'bold', color: isWinner ? 'success.contrastText' : isLastSelected ? 'primary.contrastText' : 'text.primary' }}>
+                        {formatNameForDisplay(player.name)}
+                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        {isLastSelected && !gameEnded && (
+                          <Chip label="Playing" size="small" color="primary" sx={{ bgcolor: 'primary.dark', color: 'primary.contrastText' }} />
+                        )}
+                        <Typography variant="body2" sx={{ color: isWinner ? 'success.contrastText' : isLastSelected ? 'primary.contrastText' : 'text.secondary' }}>
+                          Lives:
+                        </Typography>
+                        <Typography variant="h4" fontWeight="bold" sx={{ color: isEliminated ? 'error.main' : isWinner ? 'success.contrastText' : isLastSelected ? 'primary.contrastText' : 'primary.main' }}>
+                          {player.lives}
+                        </Typography>
+                        {isWinner && (
+                          <Chip label="Winner!" size="small" color="success" sx={{ fontWeight: 'bold' }} />
+                        )}
+                        {isEliminated && (
+                          <Chip label="Eliminated" size="small" color="error" />
+                        )}
+                      </Box>
+                    </Box>
+                  );
+                })
+                )}
+              </Box>
+              
+              {/* Action Buttons */}
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  size="large"
+                  fullWidth
+                  onClick={handleBallPotted}
+                  disabled={gameEnded || isSelecting}
+                  sx={{ 
+                    py: 1.5, 
+                    fontSize: '1.1rem', 
+                    fontWeight: 'bold',
+                    transform: buttonPressed === 'potted' ? 'scale(0.95)' : 'scale(1)',
+                    transition: 'transform 0.1s ease-in-out',
+                    animation: buttonPressed === 'potted' ? 'buttonPress 0.3s ease-in-out' : 'none',
+                    '@keyframes buttonPress': {
+                      '0%': { transform: 'scale(1)' },
+                      '50%': { transform: 'scale(0.95)' },
+                      '100%': { transform: 'scale(1)' },
+                    },
+                  }}
+                >
+                  Ball Potted
+                </Button>
+                <Button
+                  variant="contained"
+                  color="error"
+                  size="large"
+                  fullWidth
+                  onClick={handleBallMissed}
+                  disabled={gameEnded || isSelecting}
+                  sx={{ 
+                    py: 1.5, 
+                    fontSize: '1.1rem', 
+                    fontWeight: 'bold',
+                    transform: buttonPressed === 'missed' ? 'scale(0.95)' : 'scale(1)',
+                    transition: 'transform 0.1s ease-in-out',
+                    animation: buttonPressed === 'missed' ? 'buttonPress 0.3s ease-in-out' : 'none',
+                    '@keyframes buttonPress': {
+                      '0%': { transform: 'scale(1)' },
+                      '50%': { transform: 'scale(0.95)' },
+                      '100%': { transform: 'scale(1)' },
+                    },
+                  }}
+                >
+                  Ball Missed
+                </Button>
+                {killerOptions?.trickshotBlackEnabled && (
+                  <Button
+                    variant="contained"
+                    color="info"
+                    size="large"
+                    fullWidth
+                    onClick={handleTrickshotBlack}
+                    disabled={gameEnded || isSelecting}
+                    sx={{ 
+                      py: 1.5, 
+                      fontSize: '1.1rem', 
+                      fontWeight: 'bold',
+                      transform: buttonPressed === 'trickshot' ? 'scale(0.95)' : 'scale(1)',
+                      transition: 'transform 0.1s ease-in-out',
+                      animation: buttonPressed === 'trickshot' ? 'buttonPress 0.3s ease-in-out' : 'none',
+                      '@keyframes buttonPress': {
+                        '0%': { transform: 'scale(1)' },
+                        '50%': { transform: 'scale(0.95)' },
+                        '100%': { transform: 'scale(1)' },
+                      },
+                    }}
+                  >
+                    Trickshot Black
+                  </Button>
+                )}
+              </Box>
+            </CardContent>
+          </Card>
+        </Box>
+      ) : (
+        // Standard Two-Player UI
+        <Box sx={{ 
+          p: { xs: 1.5, sm: 2 }, 
+          display: 'flex', 
+          gap: { xs: 2, sm: 3, md: 4 },
+          flexDirection: { xs: 'column', sm: 'row' },
+          flex: 1,
+          minHeight: 0,
+          overflow: 'auto',
+          '@media (orientation: landscape) and (max-width: 900px)': {
+            flexDirection: 'row',
+            gap: 2,
+            p: 1.5,
+          }
+        }}>
+          <PlayerCard
+            playerName={normalizedP1}
+            displayName={displayP1}
+            score={playerOneScore}
+            isPlayerOne={true}
+            gamesWon={playerOneGamesWon}
+            setsWon={playerOneSetsWon}
+          />
+          <PlayerCard
+            playerName={normalizedP2}
+            displayName={displayP2}
+            score={playerTwoScore}
+            isPlayerOne={false}
+            gamesWon={playerTwoGamesWon}
+            setsWon={playerTwoSetsWon}
+          />
+        </Box>
+      )}
 
       {/* Pause Game Banner */}
       <Box sx={{ 
@@ -1236,8 +1627,8 @@ export default function ScoreboardScreen({
           onClick={() => {
             const savedGame: ActiveGame = {
               id: activeGame?.id || crypto.randomUUID(),
-              playerOneName: normalizedP1,
-              playerTwoName: normalizedP2,
+              playerOneName: gameMode === GameMode.KILLER ? '' : normalizedP1,
+              playerTwoName: gameMode === GameMode.KILLER ? '' : normalizedP2,
               playerOneScore,
               playerTwoScore,
               playerOneGamesWon,
@@ -1252,6 +1643,8 @@ export default function ScoreboardScreen({
               breakPlayer: currentBreakPlayer,
               playerOneColor: initialP1Color,
               playerTwoColor: initialP2Color,
+              killerOptions: gameMode === GameMode.KILLER ? killerOptions : undefined,
+              killerPlayers: gameMode === GameMode.KILLER ? killerPlayersState : undefined,
             };
             onBackClick(savedGame);
           }}

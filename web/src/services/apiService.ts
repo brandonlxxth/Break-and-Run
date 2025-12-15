@@ -84,6 +84,8 @@ export class ApiService {
         playerTwoSetsWon: dbGame.player_two_sets_won,
         sets: dbGame.sets,
         breakPlayer: dbGame.break_player,
+        killerOptions: dbGame.killer_options,
+        killerPlayers: dbGame.killer_players,
       }));
 
       // Deserialize games
@@ -119,6 +121,8 @@ export class ApiService {
         player_two_sets_won: serializableGame.playerTwoSetsWon,
         sets: serializableGame.sets,
         break_player: serializableGame.breakPlayer,
+        killer_options: serializableGame.killerOptions,
+        killer_players: serializableGame.killerPlayers,
       };
       
       const { error } = await supabase
@@ -171,7 +175,7 @@ export class ApiService {
       const dbGame = data[0]; // Get first (and should be only) result
 
       // Map database column names (snake_case) to our format
-      const mappedData = {
+      const mappedData: SerializableActiveGame = {
         id: dbGame.id,
         playerOneName: dbGame.player_one_name,
         playerTwoName: dbGame.player_two_name,
@@ -189,6 +193,8 @@ export class ApiService {
         breakPlayer: dbGame.break_player,
         playerOneColor: dbGame.player_one_color,
         playerTwoColor: dbGame.player_two_color,
+        killerOptions: dbGame.killer_options,
+        killerPlayers: dbGame.killer_players,
       };
 
       return this.deserializeActiveGame(mappedData as SerializableActiveGame);
@@ -239,6 +245,8 @@ export class ApiService {
           break_player: serializableActiveGame.breakPlayer,
           player_one_color: serializableActiveGame.playerOneColor,
           player_two_color: serializableActiveGame.playerTwoColor,
+          killer_options: serializableActiveGame.killerOptions,
+          killer_players: serializableActiveGame.killerPlayers,
         };
         
         const { error } = await supabase

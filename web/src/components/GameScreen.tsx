@@ -13,9 +13,13 @@ import {
   DialogActions,
   ToggleButton,
   ToggleButtonGroup,
+  Checkbox,
+  FormControlLabel,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { GameMode, GameModeDisplayNames, BallColor } from '../data/types';
+import AddIcon from '@mui/icons-material/Add';
+import DeleteIcon from '@mui/icons-material/Delete';
+import { GameMode, GameModeDisplayNames, BallColor, KillerPlayer } from '../data/types';
 import { normalizeName, formatNameForDisplay } from '../utils/nameUtils';
 
 interface GameScreenProps {
@@ -27,7 +31,9 @@ interface GameScreenProps {
     targetScore: number,
     breakPlayer: string,
     p1Color: BallColor | null,
-    p2Color: BallColor | null
+    p2Color: BallColor | null,
+    killerOptions?: { trickshotBlackEnabled: boolean },
+    killerPlayers?: KillerPlayer[]
   ) => void;
 }
 
@@ -37,13 +43,54 @@ export default function GameScreen({ onBackClick, onCreateGame }: GameScreenProp
   const [playerOneName, setPlayerOneName] = useState('Player 1');
   const [playerTwoName, setPlayerTwoName] = useState('Player 2');
   const [showBreakSelection, setShowBreakSelection] = useState(false);
+  const [killerPlayers, setKillerPlayers] = useState<KillerPlayer[]>([
+    { id: crypto.randomUUID(), name: 'Player 1', normalizedName: normalizeName('Player 1'), lives: 3 },
+    { id: crypto.randomUUID(), name: 'Player 2', normalizedName: normalizeName('Player 2'), lives: 3 }
+  ]);
+  const [trickshotBlackEnabled, setTrickshotBlackEnabled] = useState(false);
 
   const handleCreateGame = (breakPlayerName: string) => {
-    const normP1 = normalizeName(playerOneName || 'Player 1');
-    const normP2 = normalizeName(playerTwoName || 'Player 2');
-    const breakP = normalizeName(breakPlayerName);
-    setShowBreakSelection(false);
-    onCreateGame(normP1, normP2, gameMode, targetScore, breakP, null, null);
+    if (gameMode === GameMode.KILLER) {
+      // For killer mode, create game with killer players and options
+      const killerOptions = { trickshotBlackEnabled };
+      setShowBreakSelection(false);
+      onCreateGame('', '', gameMode, 0, '', null, null, killerOptions, killerPlayers);
+    } else {
+      // For other modes, use standard two-player setup
+      const normP1 = normalizeName(playerOneName || 'Player 1');
+      const normP2 = normalizeName(playerTwoName || 'Player 2');
+      const breakP = normalizeName(breakPlayerName);
+      setShowBreakSelection(false);
+      onCreateGame(normP1, normP2, gameMode, targetScore, breakP, null, null);
+    }
+  };
+
+  const handleAddKillerPlayer = () => {
+    const newPlayerNumber = killerPlayers.length + 1;
+    const newPlayer: KillerPlayer = {
+      id: crypto.randomUUID(), // Generate unique ID
+      name: `Player ${newPlayerNumber}`,
+      normalizedName: normalizeName(`Player ${newPlayerNumber}`),
+      lives: 3
+    };
+    setKillerPlayers([...killerPlayers, newPlayer]);
+  };
+
+  const handleRemoveKillerPlayer = (index: number) => {
+    if (killerPlayers.length > 2) {
+      setKillerPlayers(killerPlayers.filter((_, i) => i !== index));
+    }
+  };
+
+  const handleKillerPlayerNameChange = (index: number, newName: string) => {
+    const updated = [...killerPlayers];
+    updated[index] = {
+      ...updated[index],
+      name: newName,
+      normalizedName: normalizeName(newName || `Player ${index + 1}`)
+      // Keep the same id - don't regenerate it
+    };
+    setKillerPlayers(updated);
   };
 
   return (
@@ -94,7 +141,7 @@ export default function GameScreen({ onBackClick, onCreateGame }: GameScreenProp
               ))}
             </ToggleButtonGroup>
 
-            {gameMode !== GameMode.FREE_PLAY && (
+            {gameMode !== GameMode.FREE_PLAY && gameMode !== GameMode.KILLER && (
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: { xs: 1.5, sm: 2 } }}>
                 <IconButton
                   onClick={() => setTargetScore(Math.max(1, targetScore - 1))}
@@ -113,43 +160,104 @@ export default function GameScreen({ onBackClick, onCreateGame }: GameScreenProp
                 </IconButton>
               </Box>
             )}
+            {gameMode === GameMode.KILLER && (
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={trickshotBlackEnabled}
+                    onChange={(e) => setTrickshotBlackEnabled(e.target.checked)}
+                  />
+                }
+                label="Enable Trickshot Black Ball Rule"
+                sx={{ justifyContent: 'center', mt: 1 }}
+              />
+            )}
           </CardContent>
         </Card>
 
         {/* Player Names */}
-        <Card sx={{ mb: { xs: 2, sm: 3 } }}>
-          <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 1.5, sm: 2 }, p: { xs: 2, sm: 3 } }}>
-            <TextField
-              label="Player 1 Name"
-              value={playerOneName}
-              onChange={(e) => setPlayerOneName(e.target.value)}
-              fullWidth
-              sx={{
-                '& .MuiInputBase-root': {
-                  fontSize: { xs: '0.875rem', sm: '1rem' },
-                },
-              }}
-            />
-            <TextField
-              label="Player 2 Name"
-              value={playerTwoName}
-              onChange={(e) => setPlayerTwoName(e.target.value)}
-              fullWidth
-              sx={{
-                '& .MuiInputBase-root': {
-                  fontSize: { xs: '0.875rem', sm: '1rem' },
-                },
-              }}
-            />
-          </CardContent>
-        </Card>
+        {gameMode === GameMode.KILLER ? (
+          <Card sx={{ mb: { xs: 2, sm: 3 } }}>
+            <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 1.5, sm: 2 }, p: { xs: 2, sm: 3 } }}>
+              <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>
+                Players (Minimum 2)
+              </Typography>
+              {killerPlayers.map((player, index) => (
+                <Box key={player.id} sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                  <TextField
+                    label={`Player ${index + 1}`}
+                    value={player.name}
+                    onChange={(e) => handleKillerPlayerNameChange(index, e.target.value)}
+                    fullWidth
+                    sx={{
+                      '& .MuiInputBase-root': {
+                        fontSize: { xs: '0.875rem', sm: '1rem' },
+                      },
+                    }}
+                  />
+                  <IconButton
+                    onClick={() => handleRemoveKillerPlayer(index)}
+                    disabled={killerPlayers.length <= 2}
+                    color="error"
+                    sx={{ minWidth: 48, minHeight: 48 }}
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                </Box>
+              ))}
+              <Button
+                variant="outlined"
+                startIcon={<AddIcon />}
+                onClick={handleAddKillerPlayer}
+                fullWidth
+                sx={{ mt: 1 }}
+              >
+                Add Player
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card sx={{ mb: { xs: 2, sm: 3 } }}>
+            <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 1.5, sm: 2 }, p: { xs: 2, sm: 3 } }}>
+              <TextField
+                label="Player 1 Name"
+                value={playerOneName}
+                onChange={(e) => setPlayerOneName(e.target.value)}
+                fullWidth
+                sx={{
+                  '& .MuiInputBase-root': {
+                    fontSize: { xs: '0.875rem', sm: '1rem' },
+                  },
+                }}
+              />
+              <TextField
+                label="Player 2 Name"
+                value={playerTwoName}
+                onChange={(e) => setPlayerTwoName(e.target.value)}
+                fullWidth
+                sx={{
+                  '& .MuiInputBase-root': {
+                    fontSize: { xs: '0.875rem', sm: '1rem' },
+                  },
+                }}
+              />
+            </CardContent>
+          </Card>
+        )}
 
         {/* Create Game Button */}
         <Button
           variant="contained"
           fullWidth
           size="large"
-          onClick={() => setShowBreakSelection(true)}
+          onClick={() => {
+            if (gameMode === GameMode.KILLER) {
+              handleCreateGame('');
+            } else {
+              setShowBreakSelection(true);
+            }
+          }}
+          disabled={gameMode === GameMode.KILLER && killerPlayers.length < 2}
           sx={{ 
             py: { xs: 1.25, sm: 1.5 }, 
             fontSize: { xs: '1rem', sm: '1.25rem' }, 

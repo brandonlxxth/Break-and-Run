@@ -179,7 +179,12 @@ export class GameRepository {
       playerOneSetsWon: game.playerOneSetsWon,
       playerTwoSetsWon: game.playerTwoSetsWon,
       sets: game.sets.map(s => this.deserializeSet(s)),
-      breakPlayer: game.breakPlayer
+      breakPlayer: game.breakPlayer,
+      killerOptions: game.killerOptions,
+      killerPlayers: game.killerPlayers ? game.killerPlayers.map((p: any) => ({
+        ...p,
+        id: p.id || crypto.randomUUID(), // Add id if missing (backward compatibility)
+      })) : undefined
     };
   }
 
@@ -201,7 +206,9 @@ export class GameRepository {
       completedSets: activeGame.completedSets.map(s => this.serializeSet(s)),
       breakPlayer: activeGame.breakPlayer,
       playerOneColor: activeGame.playerOneColor,
-      playerTwoColor: activeGame.playerTwoColor
+      playerTwoColor: activeGame.playerTwoColor,
+      killerOptions: activeGame.killerOptions,
+      killerPlayers: activeGame.killerPlayers
     };
   }
 
@@ -223,7 +230,12 @@ export class GameRepository {
       completedSets: activeGame.completedSets.map(s => this.deserializeSet(s)),
       breakPlayer: activeGame.breakPlayer,
       playerOneColor: activeGame.playerOneColor ? (activeGame.playerOneColor as BallColor) : null,
-      playerTwoColor: activeGame.playerTwoColor ? (activeGame.playerTwoColor as BallColor) : null
+      playerTwoColor: activeGame.playerTwoColor ? (activeGame.playerTwoColor as BallColor) : null,
+      killerOptions: activeGame.killerOptions,
+      killerPlayers: activeGame.killerPlayers ? activeGame.killerPlayers.map((p: any) => ({
+        ...p,
+        id: p.id || crypto.randomUUID(), // Add id if missing (backward compatibility)
+      })) : undefined
     };
   }
 }

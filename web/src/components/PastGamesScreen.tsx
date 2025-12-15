@@ -338,61 +338,67 @@ export default function PastGamesScreen({
                     </Box>
                   ) : game.gameMode === GameMode.KILLER ? (
                     <Box>
-                      {/* Show final player standings */}
-                      {killerPlayers && killerPlayers.length > 0 && (
+                      {/* Show final player standings - always show if killer mode */}
+                      {game.gameMode === GameMode.KILLER && (
                         <Box sx={{ mb: 3 }}>
                           <Typography variant="subtitle2" fontWeight="bold" gutterBottom sx={{ color: 'text.primary', fontSize: { xs: '0.9rem', sm: '1rem' } }}>
                             Final Standings
                           </Typography>
-                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                            {killerPlayers.map((player, idx) => {
-                              // For killer mode, winner is stored as player name, so compare by name
-                              const isWinner = game.winner === player.name;
-                              // Only show as eliminated if NOT the winner and has 0 lives
-                              const isEliminated = !isWinner && player.lives === 0;
-                              return (
-                                <Box
-                                  key={player.id || idx}
-                                  sx={{
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    p: 1.5,
-                                    borderRadius: 1,
-                                    bgcolor: isWinner ? '#4caf50' : isEliminated ? 'error.light' : 'background.paper',
-                                    border: isWinner ? '2px solid' : '1px solid',
-                                    borderColor: isWinner ? '#388e3c' : 'divider',
-                                    opacity: isEliminated ? 0.6 : 1,
-                                  }}
-                                >
-                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 'bold', color: isWinner ? 'white' : 'text.primary' }}>
-                                      {formatNameForDisplay(player.name)}
+                          {killerPlayers && killerPlayers.length > 0 ? (
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                              {killerPlayers.map((player, idx) => {
+                                // For killer mode, winner is stored as player name, so compare by name
+                                const isWinner = game.winner === player.name;
+                                // Only show as eliminated if NOT the winner and has 0 lives
+                                const isEliminated = !isWinner && player.lives === 0;
+                                return (
+                                  <Box
+                                    key={player.id || idx}
+                                    sx={{
+                                      display: 'flex',
+                                      justifyContent: 'space-between',
+                                      alignItems: 'center',
+                                      p: 1.5,
+                                      borderRadius: 1,
+                                      bgcolor: isWinner ? '#4caf50' : isEliminated ? 'error.light' : 'background.paper',
+                                      border: isWinner ? '2px solid' : '1px solid',
+                                      borderColor: isWinner ? '#388e3c' : 'divider',
+                                      opacity: isEliminated ? 0.6 : 1,
+                                    }}
+                                  >
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                      <Typography variant="body2" sx={{ fontWeight: 'bold', color: isWinner ? 'white' : 'text.primary' }}>
+                                        {formatNameForDisplay(player.name)}
+                                      </Typography>
+                                      {isWinner && (
+                                        <Chip 
+                                          label="Winner" 
+                                          size="small" 
+                                          sx={{ 
+                                            height: 20, 
+                                            fontSize: '0.65rem',
+                                            bgcolor: 'rgba(255, 255, 255, 0.2)',
+                                            color: 'white',
+                                            border: '1px solid rgba(255, 255, 255, 0.3)'
+                                          }} 
+                                        />
+                                      )}
+                                      {isEliminated && (
+                                        <Chip label="Eliminated" size="small" color="error" sx={{ height: 20, fontSize: '0.65rem' }} />
+                                      )}
+                                    </Box>
+                                    <Typography variant="body2" sx={{ fontWeight: 'bold', color: isEliminated ? 'error.main' : isWinner ? 'white' : 'primary.main' }}>
+                                      {player.lives} {player.lives === 1 ? 'life' : 'lives'}
                                     </Typography>
-                                    {isWinner && (
-                                      <Chip 
-                                        label="Winner" 
-                                        size="small" 
-                                        sx={{ 
-                                          height: 20, 
-                                          fontSize: '0.65rem',
-                                          bgcolor: 'rgba(255, 255, 255, 0.2)',
-                                          color: 'white',
-                                          border: '1px solid rgba(255, 255, 255, 0.3)'
-                                        }} 
-                                      />
-                                    )}
-                                    {isEliminated && (
-                                      <Chip label="Eliminated" size="small" color="error" sx={{ height: 20, fontSize: '0.65rem' }} />
-                                    )}
                                   </Box>
-                                  <Typography variant="body2" sx={{ fontWeight: 'bold', color: isEliminated ? 'error.main' : isWinner ? 'white' : 'primary.main' }}>
-                                    {player.lives} {player.lives === 1 ? 'life' : 'lives'}
-                                  </Typography>
-                                </Box>
-                              );
-                            })}
-                          </Box>
+                                );
+                              })}
+                            </Box>
+                          ) : (
+                            <Typography variant="body2" sx={{ color: 'text.secondary', py: 2, textAlign: 'center' }}>
+                              No player data available
+                            </Typography>
+                          )}
                         </Box>
                       )}
                       

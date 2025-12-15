@@ -251,7 +251,7 @@ export default function HomeScreen({
         </Fade>
 
         {/* Main Action Cards */}
-        <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid container spacing={3} sx={{ mb: 4 }} alignItems="stretch">
           {/* Resume Game Card - Only show if active game exists AND user is signed in */}
           {activeGame && user && (
             <Grid item xs={12} md={activeGame ? 4 : 6}>
@@ -367,6 +367,7 @@ export default function HomeScreen({
                 onClick={onNewGameClick}
                 sx={{
                   height: '100%',
+                  minHeight: { xs: 200, sm: 250, md: 280 },
                   cursor: 'pointer',
                   background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
                   color: 'white',
@@ -375,6 +376,8 @@ export default function HomeScreen({
                   boxShadow: hoveredCard === 'new' ? 8 : 4,
                   position: 'relative',
                   overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
                   '&::before': {
                     content: '""',
                     position: 'absolute',
@@ -388,7 +391,7 @@ export default function HomeScreen({
                   },
                 }}
               >
-                <CardContent sx={{ p: { xs: 3, sm: 4 }, position: 'relative', zIndex: 1 }}>
+                <CardContent sx={{ p: { xs: 3, sm: 4 }, position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', flex: 1 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, sm: 2 }, mb: { xs: 1.5, sm: 2 } }}>
                     <PlayArrowIcon sx={{ fontSize: { xs: 32, sm: 40 } }} />
                     <Typography variant="h5" fontWeight="bold" sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
@@ -432,6 +435,7 @@ export default function HomeScreen({
                 onClick={onPastGamesClick}
                 sx={{
                   height: '100%',
+                  minHeight: { xs: 200, sm: 250, md: 280 },
                   cursor: 'pointer',
                   background: `linear-gradient(135deg, ${theme.palette.secondary.main}, ${theme.palette.secondary.dark})`,
                   color: 'white',
@@ -440,6 +444,8 @@ export default function HomeScreen({
                   boxShadow: hoveredCard === 'past' ? 8 : 4,
                   position: 'relative',
                   overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
                   '&::before': {
                     content: '""',
                     position: 'absolute',
@@ -453,7 +459,7 @@ export default function HomeScreen({
                   },
                 }}
               >
-                <CardContent sx={{ p: { xs: 3, sm: 4 }, position: 'relative', zIndex: 1 }}>
+                <CardContent sx={{ p: { xs: 3, sm: 4 }, position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', flex: 1 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, sm: 2 }, mb: { xs: 1.5, sm: 2 } }}>
                     <HistoryIcon sx={{ fontSize: { xs: 32, sm: 40 }, color: 'white' }} />
                     <Typography variant="h5" fontWeight="bold" sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>

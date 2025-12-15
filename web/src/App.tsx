@@ -11,7 +11,7 @@ import PastGamesScreen from './components/PastGamesScreen';
 import LoginScreen from './components/LoginScreen';
 import Footer from './components/Footer';
 import { unifiedGameRepository } from './services/UnifiedGameRepository';
-import { ActiveGame, Game, GameMode, BallColor } from './data/types';
+import { ActiveGame, Game, GameMode, BallColor, KillerPlayer } from './data/types';
 import { normalizeName } from './utils/nameUtils';
 import { Box, CircularProgress } from '@mui/material';
 
@@ -23,6 +23,8 @@ interface NewGameData {
   breakPlayer: string;
   p1Color: BallColor | null;
   p2Color: BallColor | null;
+  killerOptions?: { trickshotBlackEnabled: boolean };
+  killerPlayers?: KillerPlayer[];
 }
 
 function AppRoutes() {
@@ -81,7 +83,9 @@ function AppRoutes() {
     targetScore: number,
     breakPlayer: string,
     p1Color: BallColor | null,
-    p2Color: BallColor | null
+    p2Color: BallColor | null,
+    killerOptions?: { trickshotBlackEnabled: boolean },
+    killerPlayers?: KillerPlayer[]
   ) => {
     // Store game data in state - no sessionStorage needed
     const gameData: NewGameData = {
@@ -92,6 +96,8 @@ function AppRoutes() {
       breakPlayer,
       p1Color,
       p2Color,
+      killerOptions,
+      killerPlayers,
     };
     setNewGameData(gameData);
     navigate('/scoreboard');
@@ -257,6 +263,8 @@ function ScoreboardRoute({
       onBackClick={onBackClick}
       onGameEnd={onGameEnd}
       onActiveGameUpdate={onActiveGameUpdate}
+      killerOptions={gameData.killerOptions}
+      killerPlayers={gameData.killerPlayers}
     />
   );
 }
@@ -304,6 +312,8 @@ function ResumeGameRoute({
       onBackClick={onBackClick}
       onGameEnd={onGameEnd}
       onActiveGameUpdate={onActiveGameUpdate}
+      killerOptions={activeGame.killerOptions}
+      killerPlayers={activeGame.killerPlayers}
     />
   );
 }

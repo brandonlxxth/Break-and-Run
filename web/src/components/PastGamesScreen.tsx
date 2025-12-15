@@ -17,7 +17,7 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import { Game, GameMode, GameModeDisplayNames, DishTypeDisplayNames } from '../data/types';
+import { Game, GameMode, GameModeDisplayNames, DishTypeDisplayNames, DishType } from '../data/types';
 import { formatNameForDisplay } from '../utils/nameUtils';
 
 interface PastGamesScreenProps {
@@ -127,26 +127,56 @@ export default function PastGamesScreen({
               <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: { xs: 1, sm: 2 }, flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
                   <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography variant="h6" fontWeight="semiBold" sx={{ color: 'text.primary', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
-                      {formatNameForDisplay(game.playerOneName)} vs{' '}
-                      {formatNameForDisplay(game.playerTwoName)}
-                    </Typography>
-                    <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
-                      {game.date.toLocaleDateString()}
-                    </Typography>
+                    {game.gameMode === GameMode.KILLER ? (
+                      <>
+                        <Typography variant="h6" fontWeight="semiBold" sx={{ color: 'text.primary', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+                          {GameModeDisplayNames[GameMode.KILLER]}
+                        </Typography>
+                        {game.killerPlayers && game.killerPlayers.length > 0 && (
+                          <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
+                            {game.killerPlayers.length} {game.killerPlayers.length === 1 ? 'player' : 'players'}
+                          </Typography>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <Typography variant="h6" fontWeight="semiBold" sx={{ color: 'text.primary', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+                          {formatNameForDisplay(game.playerOneName)} vs{' '}
+                          {formatNameForDisplay(game.playerTwoName)}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
+                          {game.date.toLocaleDateString()}
+                        </Typography>
+                      </>
+                    )}
                   </Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 } }}>
                     <Box sx={{ textAlign: 'right', mr: { xs: 0.5, sm: 1 } }}>
-                      <Typography variant="h6" fontWeight="bold" sx={{ color: 'primary.main', fontSize: { xs: '1.125rem', sm: '1.25rem' } }}>
-                        {game.gameMode === GameMode.FIRST_TO && game.sets.length > 0
-                          ? `${game.playerOneSetsWon} - ${game.playerTwoSetsWon}`
-                          : `${game.playerOneScore} - ${game.playerTwoScore}`}
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
-                        {game.winner
-                          ? `Winner: ${formatNameForDisplay(game.winner)}`
-                          : 'Draw'}
-                      </Typography>
+                      {game.gameMode === GameMode.KILLER ? (
+                        <>
+                          <Typography variant="h6" fontWeight="bold" sx={{ color: 'white', fontSize: { xs: '1.125rem', sm: '1.25rem' } }}>
+                            {game.winner && game.killerPlayers 
+                              ? formatNameForDisplay(game.killerPlayers.find(p => p.id === game.winner)?.name || game.winner)
+                              : 'No Winner'}
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
+                            Winner
+                          </Typography>
+                        </>
+                      ) : (
+                        <>
+                          <Typography variant="h6" fontWeight="bold" sx={{ color: 'primary.main', fontSize: { xs: '1.125rem', sm: '1.25rem' } }}>
+                            {game.gameMode === GameMode.FIRST_TO && game.sets.length > 0
+                              ? `${game.playerOneSetsWon} - ${game.playerTwoSetsWon}`
+                              : `${game.playerOneScore} - ${game.playerTwoScore}`}
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
+                            {game.winner
+                              ? `Winner: ${formatNameForDisplay(game.winner)}`
+                              : 'Draw'}
+                          </Typography>
+                        </>
+                      )}
                     </Box>
                     <IconButton
                       size="small"
@@ -161,11 +191,18 @@ export default function PastGamesScreen({
                   </Box>
                 </Box>
 
-                <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
-                  {game.gameMode === GameMode.FREE_PLAY
-                    ? GameModeDisplayNames[game.gameMode]
-                    : `${GameModeDisplayNames[game.gameMode]}: ${game.targetScore}`}
-                </Typography>
+                {game.gameMode !== GameMode.KILLER && (
+                  <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
+                    {game.gameMode === GameMode.FREE_PLAY
+                      ? GameModeDisplayNames[game.gameMode]
+                      : `${GameModeDisplayNames[game.gameMode]}: ${game.targetScore}`}
+                  </Typography>
+                )}
+                {game.gameMode === GameMode.KILLER && (
+                  <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
+                    {game.date.toLocaleDateString()}
+                  </Typography>
+                )}
 
                 {game.frameHistory.length > 0 && (
                   <Box sx={{ mt: 1, display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: { xs: 1, sm: 0 } }}>
@@ -285,6 +322,133 @@ export default function PastGamesScreen({
                           {index < game.sets.length - 1 && <Divider sx={{ my: 1 }} />}
                         </Box>
                       ))}
+                    </Box>
+                  ) : game.gameMode === GameMode.KILLER ? (
+                    <Box>
+                      {/* Show final player standings */}
+                      {game.killerPlayers && game.killerPlayers.length > 0 && (
+                        <Box sx={{ mb: 3 }}>
+                          <Typography variant="subtitle2" fontWeight="bold" gutterBottom sx={{ color: 'text.primary', fontSize: { xs: '0.9rem', sm: '1rem' } }}>
+                            Final Standings
+                          </Typography>
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                            {game.killerPlayers.map((player, idx) => {
+                              const isWinner = game.winner === player.id; // Compare by ID instead of normalizedName
+                              // Only show as eliminated if NOT the winner and has 0 lives
+                              const isEliminated = !isWinner && player.lives === 0;
+                              return (
+                                <Box
+                                  key={player.id || idx}
+                                  sx={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    p: 1.5,
+                                    borderRadius: 1,
+                                    bgcolor: isWinner ? '#4caf50' : isEliminated ? 'error.light' : 'background.paper',
+                                    border: isWinner ? '2px solid' : '1px solid',
+                                    borderColor: isWinner ? '#388e3c' : 'divider',
+                                    opacity: isEliminated ? 0.6 : 1,
+                                  }}
+                                >
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 'bold', color: isWinner ? 'white' : 'text.primary' }}>
+                                      {formatNameForDisplay(player.name)}
+                                    </Typography>
+                                    {isWinner && (
+                                      <Chip 
+                                        label="Winner" 
+                                        size="small" 
+                                        sx={{ 
+                                          height: 20, 
+                                          fontSize: '0.65rem',
+                                          bgcolor: 'rgba(255, 255, 255, 0.2)',
+                                          color: 'white',
+                                          border: '1px solid rgba(255, 255, 255, 0.3)'
+                                        }} 
+                                      />
+                                    )}
+                                    {isEliminated && (
+                                      <Chip label="Eliminated" size="small" color="error" sx={{ height: 20, fontSize: '0.65rem' }} />
+                                    )}
+                                  </Box>
+                                  <Typography variant="body2" sx={{ fontWeight: 'bold', color: isEliminated ? 'error.main' : isWinner ? 'white' : 'primary.main' }}>
+                                    {player.lives} {player.lives === 1 ? 'life' : 'lives'}
+                                  </Typography>
+                                </Box>
+                              );
+                            })}
+                          </Box>
+                        </Box>
+                      )}
+                      
+                      {/* Show action history */}
+                      <Typography variant="subtitle2" fontWeight="bold" gutterBottom sx={{ color: 'text.primary', fontSize: { xs: '0.9rem', sm: '1rem' } }}>
+                        Action History
+                      </Typography>
+                      {game.frameHistory.map((frame, index) => {
+                        // Calculate time since previous frame
+                        const previousTime = index === 0 ? game.startTime : game.frameHistory[index - 1].timestamp;
+                        const timeSincePrevious = frame.timestamp.getTime() - previousTime.getTime();
+                        const secondsSincePrevious = timeSincePrevious / 1000.0;
+
+                        return (
+                          <Box key={index} sx={{ mb: 1 }}>
+                            <Box
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                gap: 1,
+                                flexWrap: 'wrap',
+                              }}
+                            >
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
+                                <Typography
+                                  variant="body2"
+                                  sx={{
+                                    fontWeight: 'semiBold',
+                                    color: 'text.primary',
+                                  }}
+                                >
+                                  {formatNameForDisplay(frame.player)}
+                                </Typography>
+                                {frame.dishType && frame.dishType in DishTypeDisplayNames ? (
+                                  <Chip
+                                    label={DishTypeDisplayNames[frame.dishType]}
+                                    size="small"
+                                    sx={{
+                                      height: 24,
+                                      fontSize: '0.75rem',
+                                      fontWeight: 'bold',
+                                      bgcolor: frame.dishType === DishType.MISS ? 'error.light' : frame.dishType === DishType.TRICKSHOT_BLACK ? 'info.light' : 'secondary.light',
+                                      color: frame.dishType === DishType.MISS ? 'error.contrastText' : frame.dishType === DishType.TRICKSHOT_BLACK ? 'info.contrastText' : 'secondary.contrastText',
+                                    }}
+                                  />
+                                ) : (
+                                  <Chip
+                                    label="Ball Potted"
+                                    size="small"
+                                    sx={{
+                                      height: 24,
+                                      fontSize: '0.75rem',
+                                      fontWeight: 'bold',
+                                      bgcolor: 'secondary.light',
+                                      color: 'secondary.contrastText',
+                                    }}
+                                  />
+                                )}
+                              </Box>
+                              <Typography
+                                variant="body2"
+                                sx={{ fontSize: '0.875rem', opacity: 0.7, color: 'text.secondary' }}
+                              >
+                                +{secondsSincePrevious.toFixed(1)}s
+                              </Typography>
+                            </Box>
+                          </Box>
+                        );
+                      })}
                     </Box>
                   ) : (
                     <Box>

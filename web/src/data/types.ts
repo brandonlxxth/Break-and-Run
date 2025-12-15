@@ -3,25 +3,31 @@ export enum GameMode {
   RACE_TO = "RACE_TO",
   FIRST_TO = "FIRST_TO",
   BEST_OF = "BEST_OF",
-  FREE_PLAY = "FREE_PLAY"
+  FREE_PLAY = "FREE_PLAY",
+  KILLER = "KILLER"
 }
 
 export const GameModeDisplayNames: Record<GameMode, string> = {
   [GameMode.RACE_TO]: "Race To",
   [GameMode.FIRST_TO]: "Sets Of",
   [GameMode.BEST_OF]: "Best Of",
-  [GameMode.FREE_PLAY]: "Free Play"
+  [GameMode.FREE_PLAY]: "Free Play",
+  [GameMode.KILLER]: "Killer"
 };
 
 // Dish Types
 export enum DishType {
   BREAK_DISH = "BREAK_DISH",
-  REVERSE_DISH = "REVERSE_DISH"
+  REVERSE_DISH = "REVERSE_DISH",
+  MISS = "MISS",
+  TRICKSHOT_BLACK = "TRICKSHOT_BLACK"
 }
 
 export const DishTypeDisplayNames: Record<DishType, string> = {
   [DishType.BREAK_DISH]: "Break Dish",
-  [DishType.REVERSE_DISH]: "Reverse Dish"
+  [DishType.REVERSE_DISH]: "Reverse Dish",
+  [DishType.MISS]: "Miss",
+  [DishType.TRICKSHOT_BLACK]: "Trickshot Black"
 };
 
 // Ball Colors
@@ -29,6 +35,14 @@ export enum BallColor {
   RED = "RED",
   YELLOW = "YELLOW",
   FOUL_BREAK = "FOUL_BREAK"
+}
+
+// Killer Mode Player
+export interface KillerPlayer {
+  id: string; // Unique identifier for each player
+  name: string;
+  normalizedName: string;
+  lives: number;
 }
 
 // Frame - represents a single score change
@@ -68,6 +82,10 @@ export interface Game {
   playerTwoSetsWon: number;
   sets: Set[];
   breakPlayer: string | null;
+  killerOptions?: {
+    trickshotBlackEnabled: boolean;
+  };
+  killerPlayers?: KillerPlayer[];
 }
 
 // ActiveGame - game in progress
@@ -89,6 +107,10 @@ export interface ActiveGame {
   breakPlayer: string | null;
   playerOneColor: BallColor | null;
   playerTwoColor: BallColor | null;
+  killerOptions?: {
+    trickshotBlackEnabled: boolean;
+  };
+  killerPlayers?: KillerPlayer[];
 }
 
 // Serializable versions for localStorage
@@ -126,6 +148,14 @@ export interface SerializableGame {
   playerTwoSetsWon: number;
   sets: SerializableSet[];
   breakPlayer: string | null;
+  killerOptions?: {
+    trickshotBlackEnabled: boolean;
+  };
+  killerPlayers?: Array<{
+    name: string;
+    normalizedName: string;
+    lives: number;
+  }>;
 }
 
 export interface SerializableActiveGame {
@@ -146,5 +176,13 @@ export interface SerializableActiveGame {
   breakPlayer: string | null;
   playerOneColor: string | null;
   playerTwoColor: string | null;
+  killerOptions?: {
+    trickshotBlackEnabled: boolean;
+  };
+  killerPlayers?: Array<{
+    name: string;
+    normalizedName: string;
+    lives: number;
+  }>;
 }
 

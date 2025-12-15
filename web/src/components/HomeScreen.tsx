@@ -20,7 +20,7 @@ import LoginIcon from '@mui/icons-material/Login';
 import LogoutIcon from '@mui/icons-material/Logout';
 import CloudSyncIcon from '@mui/icons-material/CloudSync';
 import DevicesIcon from '@mui/icons-material/Devices';
-import { ActiveGame } from '../data/types';
+import { ActiveGame, GameMode, GameModeDisplayNames } from '../data/types';
 import { formatNameForDisplay } from '../utils/nameUtils';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -320,13 +320,37 @@ export default function HomeScreen({
                         mt: { xs: 1.5, sm: 2 },
                       }}
                     >
-                      <Typography variant="body2" fontWeight="medium" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
-                        {formatNameForDisplay(activeGame.playerOneName)} vs{' '}
-                        {formatNameForDisplay(activeGame.playerTwoName)}
-                      </Typography>
-                      <Typography variant="h6" fontWeight="bold" sx={{ mt: 1, fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
-                        {activeGame.playerOneScore} - {activeGame.playerTwoScore}
-                      </Typography>
+                      {activeGame.gameMode === GameMode.KILLER ? (
+                        <>
+                          <Typography variant="body2" fontWeight="medium" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
+                            {GameModeDisplayNames[GameMode.KILLER]}
+                          </Typography>
+                          {activeGame.killerPlayers && activeGame.killerPlayers.length > 0 ? (
+                            <>
+                              <Typography variant="body2" sx={{ mt: 1, fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+                                {activeGame.killerPlayers.length} {activeGame.killerPlayers.length === 1 ? 'player' : 'players'}
+                              </Typography>
+                              <Typography variant="body2" sx={{ mt: 0.5, fontSize: { xs: '0.7rem', sm: '0.8rem' }, color: 'text.secondary' }}>
+                                {activeGame.killerPlayers.filter(p => p.lives > 0).length} remaining
+                              </Typography>
+                            </>
+                          ) : (
+                            <Typography variant="body2" sx={{ mt: 1, fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+                              No players loaded
+                            </Typography>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <Typography variant="body2" fontWeight="medium" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
+                            {formatNameForDisplay(activeGame.playerOneName)} vs{' '}
+                            {formatNameForDisplay(activeGame.playerTwoName)}
+                          </Typography>
+                          <Typography variant="h6" fontWeight="bold" sx={{ mt: 1, fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
+                            {activeGame.playerOneScore} - {activeGame.playerTwoScore}
+                          </Typography>
+                        </>
+                      )}
                     </Box>
                   </CardContent>
                 </Card>

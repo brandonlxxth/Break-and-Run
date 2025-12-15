@@ -14,3 +14,7 @@ local.properties
 *.jks
 *.keystore
 keystore.properties
+
+# Supabase schema files
+supabase-schema.sql
+web/supabase-schema.sql
